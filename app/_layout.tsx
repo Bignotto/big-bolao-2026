@@ -15,6 +15,7 @@ import { ThemeProvider } from 'styled-components/native';
 
 import theme from '@/constants/theme';
 import { useColorScheme } from '@/components/useColorScheme';
+import { SessionProvider } from '@/context/SessionContext';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -56,10 +57,13 @@ function RootLayoutNav() {
   return (
     <ThemeProvider theme={theme}>
       <NavThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <Stack>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-        </Stack>
+        <SessionProvider>
+          <Stack>
+            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+          </Stack>
+        </SessionProvider>
       </NavThemeProvider>
     </ThemeProvider>
   );
