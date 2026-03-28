@@ -29,12 +29,8 @@ async function fetchOrCreateApiUser(session: Session): Promise<ApiUser | null> {
     headers: { Authorization: `Bearer ${token}` },
   });
 
-  //rconsole.log('[SessionContext] Checking API user existence, status:', checkRes.status);
-  console.log(JSON.stringify({ checkRes }));
-
   if (checkRes.ok) {
     const data = await checkRes.json();
-    console.log('[SessionContext] Fetched API user:', data);
     const apiUser = data.user ?? data;
     await AsyncStorage.setItem(cacheKey, JSON.stringify(apiUser));
     return apiUser;
@@ -61,6 +57,7 @@ async function fetchOrCreateApiUser(session: Session): Promise<ApiUser | null> {
       Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify({
+      id: supabaseUser.id,
       fullName,
       email: supabaseUser.email,
       passwordHash: null,
