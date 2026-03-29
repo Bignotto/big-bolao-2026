@@ -18,48 +18,12 @@ export type Pool = {
   isParticipant: boolean;
 };
 
-const USE_MOCK = true;
-
-const MOCK_POOLS: Pool[] = [
-  {
-    id: 1,
-    tournamentId: 1,
-    name: 'Bolão da Firma',
-    description: 'Quem acertar mais jogos paga o churrasco!',
-    creatorId: 'mock-user-1',
-    isPrivate: false,
-    inviteCode: 'FIRMA2026',
-    createdAt: new Date().toISOString(),
-    maxParticipants: 20,
-    registrationDeadline: null,
-    participantsCount: 12,
-    isCreator: true,
-    isParticipant: true,
-  },
-  {
-    id: 2,
-    tournamentId: 1,
-    name: 'Copa da Família',
-    description: null,
-    creatorId: 'mock-user-2',
-    isPrivate: true,
-    inviteCode: 'FAMILIA26',
-    createdAt: new Date().toISOString(),
-    maxParticipants: null,
-    registrationDeadline: null,
-    participantsCount: 5,
-    isCreator: false,
-    isParticipant: true,
-  },
-];
-
 export function usePools(userId: string | undefined, token: string | undefined) {
-  const [pools, setPools] = useState<Pool[]>(MOCK_POOLS);
+  const [pools, setPools] = useState<Pool[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchPools = useCallback(async () => {
-    if (USE_MOCK) return;
     if (!userId || !token) return;
 
     setLoading(true);
@@ -78,7 +42,22 @@ export function usePools(userId: string | undefined, token: string | undefined) 
       }
 
       const data = await response.json();
-      setPools(Array.isArray(data) ? data : (data.pools ?? []));
+      const list: { id: number }[] = Array.isArray(data) ? data : (data.pools ?? []);
+
+      const details = await Promise.all(
+        list.map((p) =>
+          fetch(`${API_URL}/pools/${p.id}`, {
+            headers: { Authorization: `Bearer ${token}` },
+          }).then((r) => r.json()),
+        ),
+      );
+
+      const pools: Pool[] = details.map((d) => {
+        const pool: Pool = d.pool ?? d;
+        return { ...pool, isCreator: pool.isCreator ?? pool.creatorId === userId };
+      });
+
+      setPools(pools);
     } catch (e: unknown) {
       setPools([]);
       setError(e instanceof Error ? e.message : 'Erro desconhecido');

@@ -46,6 +46,13 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <TabBarIcon name="cube" color={color} />,
         }}
       />
+      <Tabs.Screen
+        name="create-pool"
+        options={{
+          href: null,
+          title: 'Criar Grupo',
+        }}
+      />
     </Tabs>
   );
 }
