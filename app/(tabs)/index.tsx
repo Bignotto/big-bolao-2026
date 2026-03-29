@@ -1,4 +1,4 @@
-import { ActivityIndicator, Alert, FlatList, Pressable } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable } from 'react-native';
 import styled from 'styled-components/native';
 import type { DefaultTheme } from 'styled-components/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -69,7 +69,9 @@ export default function DashboardScreen() {
           data={pools}
           keyExtractor={(item) => String(item.id)}
           contentContainerStyle={{ padding: 16, paddingBottom: 32, gap: 12 }}
-          renderItem={({ item }) => <PoolCard pool={item} />}
+          renderItem={({ item }) => (
+            <PoolCard pool={item} onPress={() => router.push(`/pool/${item.id}`)} />
+          )}
           ListEmptyComponent={<EmptyPools onCreatePool={handleCreatePool} />}
           showsVerticalScrollIndicator={false}
         />
@@ -78,9 +80,9 @@ export default function DashboardScreen() {
   );
 }
 
-function PoolCard({ pool }: { pool: Pool }) {
+function PoolCard({ pool, onPress }: { pool: Pool; onPress: () => void }) {
   function handlePress() {
-    Alert.alert(pool.name, 'Detalhes do grupo chegará em breve!');
+    onPress();
   }
 
   return (

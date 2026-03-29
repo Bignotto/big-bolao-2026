@@ -44,18 +44,24 @@ export function usePools(userId: string | undefined, token: string | undefined) 
       const data = await response.json();
       const list: { id: number }[] = Array.isArray(data) ? data : (data.pools ?? []);
 
-      const details = await Promise.all(
+      const results = await Promise.allSettled(
         list.map((p) =>
           fetch(`${API_URL}/pools/${p.id}`, {
             headers: { Authorization: `Bearer ${token}` },
-          }).then((r) => r.json()),
+          }).then((r) => {
+            if (!r.ok) throw new Error(`HTTP ${r.status} for pool ${p.id}`);
+            return r.json();
+          }),
         ),
       );
 
-      const pools: Pool[] = details.map((d) => {
-        const pool: Pool = d.pool ?? d;
-        return { ...pool, isCreator: pool.isCreator ?? pool.creatorId === userId };
-      });
+      const pools: Pool[] = results
+        .filter((r): r is PromiseFulfilledResult<unknown> => r.status === 'fulfilled')
+        .map((r) => {
+          const d = r.value as Record<string, unknown>;
+          const pool = (d.pool ?? d) as Pool;
+          return { ...pool, isCreator: pool.isCreator ?? pool.creatorId === userId };
+        });
 
       setPools(pools);
     } catch (e: unknown) {
