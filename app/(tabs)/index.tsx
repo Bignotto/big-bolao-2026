@@ -23,6 +23,10 @@ export default function DashboardScreen() {
     router.push('/(tabs)/create-pool');
   }
 
+  function handleFindPool() {
+    router.push('/(tabs)/find-pool');
+  }
+
   return (
     <Screen>
       <Header>
@@ -72,10 +76,21 @@ export default function DashboardScreen() {
           renderItem={({ item }) => (
             <PoolCard pool={item} onPress={() => router.push(`/pool/${item.id}`)} />
           )}
-          ListEmptyComponent={<EmptyPools onCreatePool={handleCreatePool} />}
+          ListEmptyComponent={<EmptyPools onCreatePool={handleCreatePool} onFindPool={handleFindPool} />}
           showsVerticalScrollIndicator={false}
         />
       )}
+
+      <FindPoolBar>
+        <AppButton
+          title="Buscar um grupo para entrar"
+          variant="solid"
+          color="#5B7485"
+          size="md"
+          leftIcon={<Ionicons name="search-outline" size={18} color="#fff" />}
+          onPress={handleFindPool}
+        />
+      </FindPoolBar>
     </Screen>
   );
 }
@@ -142,7 +157,7 @@ function PoolCard({ pool, onPress }: { pool: Pool; onPress: () => void }) {
   );
 }
 
-function EmptyPools({ onCreatePool }: { onCreatePool: () => void }) {
+function EmptyPools({ onCreatePool, onFindPool }: { onCreatePool: () => void; onFindPool: () => void }) {
   return (
     <EmptyState>
       <Ionicons name="people-outline" size={56} color="#B2BCBF" />
@@ -161,6 +176,13 @@ function EmptyPools({ onCreatePool }: { onCreatePool: () => void }) {
         size="md"
         onPress={onCreatePool}
       />
+      <AppSpacer verticalSpace="sm" />
+      <AppButton
+        title="Entrar em um grupo"
+        variant="transparent"
+        size="md"
+        onPress={onFindPool}
+      />
     </EmptyState>
   );
 }
@@ -177,6 +199,13 @@ const Header = styled.View`
   align-items: center;
   justify-content: space-between;
   padding: 16px 16px 12px;
+`;
+
+const FindPoolBar = styled.View<{ theme: DefaultTheme }>`
+  padding: 12px 16px 16px;
+  background-color: ${({ theme }) => theme.colors.background};
+  border-top-width: 1px;
+  border-top-color: #eaeeef;
 `;
 
 const CardPressable = styled(Pressable)<{ theme: DefaultTheme }>`

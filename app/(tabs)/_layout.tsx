@@ -53,6 +53,13 @@ export default function TabLayout() {
           title: 'Criar Grupo',
         }}
       />
+      <Tabs.Screen
+        name="find-pool"
+        options={{
+          href: null,
+          title: 'Buscar Grupo',
+        }}
+      />
     </Tabs>
   );
 }
