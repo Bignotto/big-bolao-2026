@@ -1,7 +1,10 @@
-import { ActivityIndicator, Alert, FlatList, Pressable } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable } from 'react-native';
 import styled from 'styled-components/native';
 import type { DefaultTheme } from 'styled-components/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
+import { useCallback } from 'react';
 
 import AppText from '@/components/AppComponents/AppText';
 import AppButton from '@/components/AppComponents/AppButton';
@@ -10,11 +13,18 @@ import { useSession } from '@/context/SessionContext';
 import { usePools, type Pool } from '@/hooks/usePools';
 
 export default function DashboardScreen() {
+  const router = useRouter();
   const { apiUser, session, signOut } = useSession();
   const { pools, loading, error, refresh } = usePools(apiUser?.id, session?.access_token);
 
+  useFocusEffect(useCallback(() => { refresh(); }, [refresh]));
+
   function handleCreatePool() {
-    Alert.alert('Em breve', 'Criação de grupos chegará em breve!');
+    router.push('/(tabs)/create-pool');
+  }
+
+  function handleFindPool() {
+    router.push('/(tabs)/find-pool');
   }
 
   return (
@@ -63,18 +73,31 @@ export default function DashboardScreen() {
           data={pools}
           keyExtractor={(item) => String(item.id)}
           contentContainerStyle={{ padding: 16, paddingBottom: 32, gap: 12 }}
-          renderItem={({ item }) => <PoolCard pool={item} />}
-          ListEmptyComponent={<EmptyPools onCreatePool={handleCreatePool} />}
+          renderItem={({ item }) => (
+            <PoolCard pool={item} onPress={() => router.push(`/pool/${item.id}`)} />
+          )}
+          ListEmptyComponent={<EmptyPools onCreatePool={handleCreatePool} onFindPool={handleFindPool} />}
           showsVerticalScrollIndicator={false}
         />
       )}
+
+      <FindPoolBar>
+        <AppButton
+          title="Buscar um grupo para entrar"
+          variant="solid"
+          color="#5B7485"
+          size="md"
+          leftIcon={<Ionicons name="search-outline" size={18} color="#fff" />}
+          onPress={handleFindPool}
+        />
+      </FindPoolBar>
     </Screen>
   );
 }
 
-function PoolCard({ pool }: { pool: Pool }) {
+function PoolCard({ pool, onPress }: { pool: Pool; onPress: () => void }) {
   function handlePress() {
-    Alert.alert(pool.name, 'Detalhes do grupo chegará em breve!');
+    onPress();
   }
 
   return (
@@ -134,7 +157,7 @@ function PoolCard({ pool }: { pool: Pool }) {
   );
 }
 
-function EmptyPools({ onCreatePool }: { onCreatePool: () => void }) {
+function EmptyPools({ onCreatePool, onFindPool }: { onCreatePool: () => void; onFindPool: () => void }) {
   return (
     <EmptyState>
       <Ionicons name="people-outline" size={56} color="#B2BCBF" />
@@ -153,6 +176,13 @@ function EmptyPools({ onCreatePool }: { onCreatePool: () => void }) {
         size="md"
         onPress={onCreatePool}
       />
+      <AppSpacer verticalSpace="sm" />
+      <AppButton
+        title="Entrar em um grupo"
+        variant="transparent"
+        size="md"
+        onPress={onFindPool}
+      />
     </EmptyState>
   );
 }
@@ -169,6 +199,13 @@ const Header = styled.View`
   align-items: center;
   justify-content: space-between;
   padding: 16px 16px 12px;
+`;
+
+const FindPoolBar = styled.View<{ theme: DefaultTheme }>`
+  padding: 12px 16px 16px;
+  background-color: ${({ theme }) => theme.colors.background};
+  border-top-width: 1px;
+  border-top-color: #eaeeef;
 `;
 
 const CardPressable = styled(Pressable)<{ theme: DefaultTheme }>`

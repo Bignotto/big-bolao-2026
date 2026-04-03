@@ -36,16 +36,18 @@ async function fetchOrCreateApiUser(session: Session): Promise<ApiUser | null> {
     return apiUser;
   }
 
-  // API couldn't find the user — try cache before attempting creation
-  const cached = await AsyncStorage.getItem(cacheKey);
-  if (cached) return JSON.parse(cached) as ApiUser;
-
-  if (checkRes.status !== 404) {
+  // User not found in DB — proceed to create them
+  if (checkRes.status === 404) {
+    await AsyncStorage.removeItem(cacheKey);
+  } else {
+    // Unexpected error — fall back to cache to avoid locking the user out
     console.error('[SessionContext] GET /users/me unexpected status:', checkRes.status);
+    const cached = await AsyncStorage.getItem(cacheKey);
+    if (cached) return JSON.parse(cached) as ApiUser;
     return null;
   }
 
-  // No cache, no existing user — create them
+  // No user in DB — create them
   const meta = supabaseUser.user_metadata ?? {};
   const fullName: string = meta.full_name ?? meta.name ?? supabaseUser.email ?? 'User';
   const profileImageUrl: string | null = meta.avatar_url ?? meta.picture ?? null;
