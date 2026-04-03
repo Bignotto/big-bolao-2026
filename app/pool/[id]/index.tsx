@@ -1,5 +1,6 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback } from 'react';
 import { ActivityIndicator, Alert, ScrollView } from 'react-native';
 import styled from 'styled-components/native';
 import type { DefaultTheme } from 'styled-components/native';
@@ -19,6 +20,12 @@ export default function PoolDetailsScreen() {
     id ? Number(id) : undefined,
     apiUser?.id,
     session?.access_token,
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      refresh();
+    }, [refresh]),
   );
 
   function handleLeavePool() {
@@ -184,6 +191,16 @@ export default function PoolDetailsScreen() {
         )}
 
         {/* Actions */}
+        {pool.isCreator && (
+          <AppButton
+            title="Editar regras de pontuação"
+            variant="solid"
+            size="md"
+            leftIcon={<Ionicons name="settings-outline" size={16} color="#FFFFFF" />}
+            onPress={() => router.push(`/pool/${id}/settings`)}
+          />
+        )}
+
         {!pool.isCreator && (
           <AppButton
             title="Sair do grupo"
