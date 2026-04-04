@@ -10,7 +10,6 @@ import AppInput from '@/components/AppComponents/AppInput';
 import AppNumberInput from '@/components/AppComponents/AppNumberInput';
 import AppSpacer from '@/components/AppComponents/AppSpacer';
 import AppText from '@/components/AppComponents/AppText';
-import { useSession } from '@/context/SessionContext';
 import { useCreatePool } from '@/hooks/useCreatePool';
 
 // Tournament ID is fixed to the 2026 World Cup
@@ -18,8 +17,7 @@ const TOURNAMENT_ID = 1;
 
 export default function CreatePoolScreen() {
   const router = useRouter();
-  const { session } = useSession();
-  const { createPool, loading, error } = useCreatePool(session?.access_token);
+  const { createPool, loading, error } = useCreatePool();
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');

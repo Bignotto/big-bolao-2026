@@ -14,13 +14,9 @@ import { usePool, type ScoringRule } from '@/hooks/usePool';
 export default function PoolDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { session, apiUser } = useSession();
+  const { session } = useSession();
 
-  const { pool, loading, error, refresh } = usePool(
-    id ? Number(id) : undefined,
-    apiUser?.id,
-    session?.access_token,
-  );
+  const { pool, loading, error, refresh } = usePool(id ? Number(id) : undefined);
 
   useFocusEffect(
     useCallback(() => {

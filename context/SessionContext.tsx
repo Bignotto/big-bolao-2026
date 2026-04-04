@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Session, User } from '@supabase/supabase-js';
 import { useRouter, useSegments } from 'expo-router';
 import { createContext, useContext, useEffect, useState } from 'react';
@@ -6,10 +5,6 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? '';
-
-function apiUserCacheKey(supabaseId: string) {
-  return `@big_bolao/api_user/${supabaseId}`;
-}
 
 export type ApiUser = {
   id: string;
@@ -22,7 +17,6 @@ export type ApiUser = {
 async function fetchOrCreateApiUser(session: Session): Promise<ApiUser | null> {
   const token = session.access_token;
   const supabaseUser = session.user;
-  const cacheKey = apiUserCacheKey(supabaseUser.id);
 
   // Try to fetch existing user from API
   const checkRes = await fetch(`${API_URL}/users/me`, {
@@ -31,19 +25,12 @@ async function fetchOrCreateApiUser(session: Session): Promise<ApiUser | null> {
 
   if (checkRes.ok) {
     const data = await checkRes.json();
-    const apiUser = data.user ?? data;
-    await AsyncStorage.setItem(cacheKey, JSON.stringify(apiUser));
-    return apiUser;
+    return data.user ?? data;
   }
 
-  // User not found in DB — proceed to create them
-  if (checkRes.status === 404) {
-    await AsyncStorage.removeItem(cacheKey);
-  } else {
-    // Unexpected error — fall back to cache to avoid locking the user out
+  // Unexpected error — cannot recover without a cache
+  if (checkRes.status !== 404) {
     console.error('[SessionContext] GET /users/me unexpected status:', checkRes.status);
-    const cached = await AsyncStorage.getItem(cacheKey);
-    if (cached) return JSON.parse(cached) as ApiUser;
     return null;
   }
 
@@ -77,9 +64,7 @@ async function fetchOrCreateApiUser(session: Session): Promise<ApiUser | null> {
   }
 
   const created = await createRes.json();
-  const apiUser = created.user ?? created;
-  await AsyncStorage.setItem(cacheKey, JSON.stringify(apiUser));
-  return apiUser;
+  return created.user ?? created;
 }
 
 type SessionContextValue = {
@@ -112,8 +97,15 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (session) setApiUser(await fetchOrCreateApiUser(session));
-      else setApiUser(null);
+      if (session) {
+        try {
+          setApiUser(await fetchOrCreateApiUser(session));
+        } catch {
+          setApiUser(null);
+        }
+      } else {
+        setApiUser(null);
+      }
       setSession(session);
       setLoading(false);
     });

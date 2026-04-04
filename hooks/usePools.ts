@@ -1,6 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL ?? '';
+import { apiFetch } from '@/lib/apiClient';
+import { useSession } from '@/context/SessionContext';
+import { poolKeys } from './poolKeys';
 
 export type Pool = {
   id: number;
@@ -18,63 +20,33 @@ export type Pool = {
   isParticipant: boolean;
 };
 
-export function usePools(userId: string | undefined, token: string | undefined) {
-  const [pools, setPools] = useState<Pool[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+export function usePools() {
+  const { apiUser } = useSession();
 
-  const fetchPools = useCallback(async () => {
-    if (!userId || !token) return;
+  const query = useQuery({
+    queryKey: poolKeys.myPools,
+    queryFn: async () => {
+      const data = await apiFetch<{ pools?: { id: number }[] } | { id: number }[]>(
+        `/users/${apiUser!.id}/pools`,
+      );
+      const list = Array.isArray(data) ? data : (data.pools ?? []);
 
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch(`${API_URL}/users/${userId}/pools`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!response.ok) {
-        const body = await response.json().catch(() => ({}));
-        const msg = body?.message ?? `HTTP ${response.status}`;
-        console.error('[usePools] error:', response.status, body);
-        throw new Error(msg);
-      }
-
-      const data = await response.json();
-      const list: { id: number }[] = Array.isArray(data) ? data : (data.pools ?? []);
-
-      const results = await Promise.allSettled(
+      const details = await Promise.all(
         list.map((p) =>
-          fetch(`${API_URL}/pools/${p.id}`, {
-            headers: { Authorization: `Bearer ${token}` },
-          }).then((r) => {
-            if (!r.ok) throw new Error(`HTTP ${r.status} for pool ${p.id}`);
-            return r.json();
+          apiFetch<{ pool?: Pool } | Pool>(`/pools/${p.id}`).then((r) => {
+            return (r as { pool?: Pool }).pool ?? (r as Pool);
           }),
         ),
       );
+      return details;
+    },
+    enabled: !!apiUser,
+  });
 
-      const pools: Pool[] = results
-        .filter((r): r is PromiseFulfilledResult<unknown> => r.status === 'fulfilled')
-        .map((r) => {
-          const d = r.value as Record<string, unknown>;
-          const pool = (d.pool ?? d) as Pool;
-          return { ...pool, isCreator: pool.isCreator ?? pool.creatorId === userId };
-        });
-
-      setPools(pools);
-    } catch (e: unknown) {
-      setPools([]);
-      setError(e instanceof Error ? e.message : 'Erro desconhecido');
-    } finally {
-      setLoading(false);
-    }
-  }, [userId, token]);
-
-  useEffect(() => {
-    fetchPools();
-  }, [fetchPools]);
-
-  return { pools, loading, error, refresh: fetchPools };
+  return {
+    pools: query.data ?? [],
+    loading: query.isLoading,
+    error: query.error ? (query.error as Error).message : null,
+    refresh: query.refetch,
+  };
 }

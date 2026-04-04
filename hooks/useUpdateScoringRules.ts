@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL ?? '';
+import { apiFetch } from '@/lib/apiClient';
+import { poolKeys } from './poolKeys';
 
 export type UpdateScoringRulesPayload = {
   exactScorePoints?: number;
@@ -11,43 +12,26 @@ export type UpdateScoringRulesPayload = {
   finalMultiplier?: number;
 };
 
-export function useUpdateScoringRules(poolId: number | undefined, token: string | undefined) {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+export function useUpdateScoringRules(poolId: number | undefined) {
+  const queryClient = useQueryClient();
 
-  function clearError() {
-    setError(null);
-  }
-
-  async function updateRules(payload: UpdateScoringRulesPayload): Promise<boolean> {
-    if (!poolId || !token) return false;
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch(`${API_URL}/pools/${poolId}/scoring-rules`, {
+  const mutation = useMutation({
+    mutationFn: (payload: UpdateScoringRulesPayload) =>
+      apiFetch(`/pools/${poolId}/scoring-rules`, {
         method: 'PUT',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify(payload),
-      });
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: poolKeys.detail(poolId!) });
+      queryClient.invalidateQueries({ queryKey: poolKeys.standings(poolId!) });
+    },
+  });
 
-      if (!response.ok) {
-        const body = await response.json().catch(() => ({}));
-        throw new Error(body?.message ?? `HTTP ${response.status}`);
-      }
-
-      return true;
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Erro desconhecido');
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  return { updateRules, loading, error, clearError };
+  return {
+    updateRules: (payload: UpdateScoringRulesPayload) =>
+      mutation.mutateAsync(payload).then(() => true).catch(() => false),
+    loading: mutation.isPending,
+    error: mutation.error ? (mutation.error as Error).message : null,
+    clearError: () => mutation.reset(),
+  };
 }

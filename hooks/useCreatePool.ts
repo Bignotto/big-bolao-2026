@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL ?? '';
+import { apiFetch } from '@/lib/apiClient';
+import { poolKeys } from './poolKeys';
 
 export type CreatePoolPayload = {
   name: string;
@@ -11,42 +12,25 @@ export type CreatePoolPayload = {
   maxParticipants?: number;
 };
 
-export function useCreatePool(token: string | undefined) {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+export function useCreatePool() {
+  const queryClient = useQueryClient();
 
-  async function createPool(payload: CreatePoolPayload): Promise<boolean> {
-    if (!token) {
-      setError('Você precisa estar autenticado.');
-      return false;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch(`${API_URL}/pools`, {
+  const mutation = useMutation({
+    mutationFn: (payload: CreatePoolPayload) =>
+      apiFetch<{ pool: unknown }>('/pools', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
         body: JSON.stringify(payload),
-      });
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: poolKeys.myPools });
+    },
+  });
 
-      if (!response.ok) {
-        const body = await response.json().catch(() => ({}));
-        throw new Error(body?.message ?? `Erro ${response.status}`);
-      }
-
-      return true;
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Erro desconhecido');
-      return false;
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  return { createPool, loading, error, clearError: () => setError(null) };
+  return {
+    createPool: (payload: CreatePoolPayload) =>
+      mutation.mutateAsync(payload).then(() => true).catch(() => false),
+    loading: mutation.isPending,
+    error: mutation.error ? (mutation.error as Error).message : null,
+    clearError: () => mutation.reset(),
+  };
 }

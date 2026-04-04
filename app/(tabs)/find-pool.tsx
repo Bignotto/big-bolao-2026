@@ -16,7 +16,6 @@ import type { DefaultTheme } from 'styled-components/native';
 import AppButton from '@/components/AppComponents/AppButton';
 import AppSpacer from '@/components/AppComponents/AppSpacer';
 import AppText from '@/components/AppComponents/AppText';
-import { useSession } from '@/context/SessionContext';
 import { useJoinPool } from '@/hooks/useJoinPool';
 import { useSearchPools } from '@/hooks/useSearchPools';
 import type { Pool } from '@/hooks/usePools';
@@ -25,8 +24,6 @@ type SearchMode = 'byName' | 'byCode';
 
 export default function FindPoolScreen() {
   const router = useRouter();
-  const { session } = useSession();
-  const token = session?.access_token;
 
   const [mode, setMode] = useState<SearchMode>('byName');
   const [nameQuery, setNameQuery] = useState('');
@@ -35,7 +32,7 @@ export default function FindPoolScreen() {
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const { pools, loading: searching, error: searchError, search, reset } = useSearchPools(token);
+  const { pools, loading: searching, error: searchError, search, reset } = useSearchPools();
   const {
     previewPool,
     previewing,
@@ -47,7 +44,7 @@ export default function FindPoolScreen() {
     joinById,
     joinByCode,
     clearJoinError,
-  } = useJoinPool(token);
+  } = useJoinPool();
 
   // Debounced name search
   useEffect(() => {
