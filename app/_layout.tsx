@@ -7,6 +7,7 @@ import {
   useFonts,
 } from '@expo-google-fonts/inter';
 import { DarkTheme, DefaultTheme, ThemeProvider as NavThemeProvider } from '@react-navigation/native';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
@@ -16,6 +17,8 @@ import { ThemeProvider } from 'styled-components/native';
 import theme from '@/constants/theme';
 import { useColorScheme } from '@/components/useColorScheme';
 import { SessionProvider } from '@/context/SessionContext';
+import { queryClient } from '@/lib/queryClient';
+import { useAppFocusRefetch } from '@/lib/useAppFocusRefetch';
 
 export { ErrorBoundary } from 'expo-router';
 
@@ -52,19 +55,22 @@ export default function RootLayout() {
 }
 
 function RootLayoutNav() {
+  useAppFocusRefetch();
   const colorScheme = useColorScheme();
 
   return (
     <ThemeProvider theme={theme}>
       <NavThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <SessionProvider>
-          <Stack>
-            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-            <Stack.Screen name="pool/[id]" options={{ headerShown: false }} />
-          </Stack>
-        </SessionProvider>
+        <QueryClientProvider client={queryClient}>
+          <SessionProvider>
+            <Stack>
+              <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
+              <Stack.Screen name="pool/[id]" options={{ headerShown: false }} />
+            </Stack>
+          </SessionProvider>
+        </QueryClientProvider>
       </NavThemeProvider>
     </ThemeProvider>
   );

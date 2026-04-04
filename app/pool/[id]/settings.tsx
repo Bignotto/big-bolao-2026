@@ -9,21 +9,16 @@ import AppButton from '@/components/AppComponents/AppButton';
 import AppNumberInput from '@/components/AppComponents/AppNumberInput';
 import AppSpacer from '@/components/AppComponents/AppSpacer';
 import AppText from '@/components/AppComponents/AppText';
-import { useSession } from '@/context/SessionContext';
 import { usePool } from '@/hooks/usePool';
 import { useUpdateScoringRules } from '@/hooks/useUpdateScoringRules';
 
 export default function PoolSettingsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { session, apiUser } = useSession();
   const poolId = id ? Number(id) : undefined;
 
-  const { pool, loading: poolLoading } = usePool(poolId, apiUser?.id, session?.access_token);
-  const { updateRules, loading: saving, error, clearError } = useUpdateScoringRules(
-    poolId,
-    session?.access_token,
-  );
+  const { pool, loading: poolLoading } = usePool(poolId);
+  const { updateRules, loading: saving, error, clearError } = useUpdateScoringRules(poolId);
 
   const [exactScorePoints, setExactScorePoints] = useState('');
   const [correctWinnerGoalDiffPoints, setCorrectWinnerGoalDiffPoints] = useState('');

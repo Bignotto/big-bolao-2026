@@ -1,45 +1,65 @@
 import { useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+
+import { apiFetch, ApiError } from '@/lib/apiClient';
+import { poolKeys } from './poolKeys';
 import type { Pool } from './usePools';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL ?? '';
+export function useJoinPool() {
+  const queryClient = useQueryClient();
 
-export function useJoinPool(token: string | undefined) {
   const [previewPool, setPreviewPool] = useState<Pool | null>(null);
   const [previewing, setPreviewing] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
 
-  const [joining, setJoining] = useState(false);
-  const [joinError, setJoinError] = useState<string | null>(null);
+  const joinByIdMutation = useMutation({
+    mutationFn: async (poolId: number) => {
+      try {
+        return await apiFetch(`/pools/${poolId}/users`, {
+          method: 'POST',
+          body: JSON.stringify({}),
+        });
+      } catch (e) {
+        if (e instanceof ApiError && e.status === 409) {
+          throw new Error('Você já participa deste grupo.');
+        }
+        throw e;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: poolKeys.myPools });
+    },
+  });
+
+  const joinByCodeMutation = useMutation({
+    mutationFn: async (code: string) => {
+      try {
+        return await apiFetch(`/pool-invites/${code}`, { method: 'POST', body: JSON.stringify({}) });
+      } catch (e) {
+        if (e instanceof ApiError && e.status === 409) {
+          throw new Error('Você já participa deste grupo.');
+        }
+        throw e;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: poolKeys.myPools });
+    },
+  });
 
   async function fetchByCode(code: string): Promise<void> {
-    if (!token) {
-      setPreviewError('Você precisa estar autenticado.');
-      return;
-    }
-
     setPreviewing(true);
     setPreviewError(null);
     setPreviewPool(null);
-
     try {
-      const response = await fetch(`${API_URL}/pool-invites/${code}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (response.status === 404) {
-        throw new Error('Código de convite não encontrado.');
+      const data = await apiFetch<{ pool?: Pool } | Pool>(`/pool-invites/${code}`);
+      setPreviewPool((data as { pool?: Pool }).pool ?? (data as Pool));
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 404) {
+        setPreviewError('Código de convite não encontrado.');
+      } else {
+        setPreviewError(e instanceof Error ? e.message : 'Erro desconhecido');
       }
-
-      if (!response.ok) {
-        const body = await response.json().catch(() => ({}));
-        throw new Error(body?.message ?? `Erro ${response.status}`);
-      }
-
-      const data = await response.json();
-      const pool = (data.pool ?? data) as Pool;
-      setPreviewPool(pool);
-    } catch (e: unknown) {
-      setPreviewError(e instanceof Error ? e.message : 'Erro desconhecido');
     } finally {
       setPreviewing(false);
     }
@@ -50,77 +70,12 @@ export function useJoinPool(token: string | undefined) {
     setPreviewError(null);
   }
 
-  async function joinById(poolId: number): Promise<boolean> {
-    if (!token) {
-      setJoinError('Você precisa estar autenticado.');
-      return false;
-    }
-
-    setJoining(true);
-    setJoinError(null);
-
-    try {
-      const response = await fetch(`${API_URL}/pools/${poolId}/users`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({}),
-      });
-
-      if (response.status === 409) {
-        throw new Error('Você já participa deste grupo.');
-      }
-
-      if (!response.ok) {
-        const body = await response.json().catch(() => ({}));
-        throw new Error(body?.message ?? `Erro ${response.status}`);
-      }
-
-      return true;
-    } catch (e: unknown) {
-      setJoinError(e instanceof Error ? e.message : 'Erro desconhecido');
-      return false;
-    } finally {
-      setJoining(false);
-    }
-  }
-
-  async function joinByCode(code: string): Promise<boolean> {
-    if (!token) {
-      setJoinError('Você precisa estar autenticado.');
-      return false;
-    }
-
-    setJoining(true);
-    setJoinError(null);
-
-    try {
-      const response = await fetch(`${API_URL}/pool-invites/${code}`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (response.status === 409) {
-        throw new Error('Você já participa deste grupo.');
-      }
-
-      if (!response.ok) {
-        const body = await response.json().catch(() => ({}));
-        throw new Error(body?.message ?? `Erro ${response.status}`);
-      }
-
-      return true;
-    } catch (e: unknown) {
-      setJoinError(e instanceof Error ? e.message : 'Erro desconhecido');
-      return false;
-    } finally {
-      setJoining(false);
-    }
-  }
+  const joining = joinByIdMutation.isPending || joinByCodeMutation.isPending;
+  const joinError = joinByIdMutation.error
+    ? (joinByIdMutation.error as Error).message
+    : joinByCodeMutation.error
+      ? (joinByCodeMutation.error as Error).message
+      : null;
 
   return {
     previewPool,
@@ -130,8 +85,13 @@ export function useJoinPool(token: string | undefined) {
     clearPreview,
     joining,
     joinError,
-    joinById,
-    joinByCode,
-    clearJoinError: () => setJoinError(null),
+    joinById: (poolId: number) =>
+      joinByIdMutation.mutateAsync(poolId).then(() => true).catch(() => false),
+    joinByCode: (code: string) =>
+      joinByCodeMutation.mutateAsync(code).then(() => true).catch(() => false),
+    clearJoinError: () => {
+      joinByIdMutation.reset();
+      joinByCodeMutation.reset();
+    },
   };
 }

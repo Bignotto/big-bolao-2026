@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL ?? '';
+import { apiFetch } from '@/lib/apiClient';
+import { poolKeys } from './poolKeys';
 
 export type ScoringRule = {
   id: number;
@@ -31,44 +32,20 @@ export type PoolDetail = {
   scoringRules: ScoringRule;
 };
 
-export function usePool(
-  poolId: number | undefined,
-  userId: string | undefined,
-  token: string | undefined,
-) {
-  const [pool, setPool] = useState<PoolDetail | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+export function usePool(poolId: number | undefined) {
+  const query = useQuery({
+    queryKey: poolKeys.detail(poolId!),
+    queryFn: async () => {
+      const data = await apiFetch<{ pool?: PoolDetail } | PoolDetail>(`/pools/${poolId}`);
+      return (data as { pool?: PoolDetail }).pool ?? (data as PoolDetail);
+    },
+    enabled: !!poolId,
+  });
 
-  const fetchPool = useCallback(async () => {
-    if (!poolId || !token) return;
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch(`${API_URL}/pools/${poolId}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (!response.ok) {
-        const body = await response.json().catch(() => ({}));
-        throw new Error(body?.message ?? `HTTP ${response.status}`);
-      }
-
-      const data = await response.json();
-      const raw: PoolDetail = data.pool ?? data;
-      setPool({ ...raw, isCreator: raw.isCreator ?? raw.creatorId === userId });
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Erro desconhecido');
-    } finally {
-      setLoading(false);
-    }
-  }, [poolId, userId, token]);
-
-  useEffect(() => {
-    fetchPool();
-  }, [fetchPool]);
-
-  return { pool, loading, error, refresh: fetchPool };
+  return {
+    pool: query.data ?? null,
+    loading: query.isLoading,
+    error: query.error ? (query.error as Error).message : null,
+    refresh: query.refetch,
+  };
 }

@@ -3,8 +3,6 @@ import styled from 'styled-components/native';
 import type { DefaultTheme } from 'styled-components/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
-import { useFocusEffect } from '@react-navigation/native';
-import { useCallback } from 'react';
 
 import AppText from '@/components/AppComponents/AppText';
 import AppButton from '@/components/AppComponents/AppButton';
@@ -14,10 +12,8 @@ import { usePools, type Pool } from '@/hooks/usePools';
 
 export default function DashboardScreen() {
   const router = useRouter();
-  const { apiUser, session, signOut } = useSession();
-  const { pools, loading, error, refresh } = usePools(apiUser?.id, session?.access_token);
-
-  useFocusEffect(useCallback(() => { refresh(); }, [refresh]));
+  const { signOut } = useSession();
+  const { pools, loading, error, refresh } = usePools();
 
   function handleCreatePool() {
     router.push('/(tabs)/create-pool');
