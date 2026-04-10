@@ -47,6 +47,34 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="matches"
+        options={{
+          title: 'Partidas',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? 'football' : 'football-outline'}
+              size={26}
+              color={color}
+              style={{ marginBottom: -3 }}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Perfil',
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons
+              name={focused ? 'person' : 'person-outline'}
+              size={26}
+              color={color}
+              style={{ marginBottom: -3 }}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="create-pool"
         options={{
           href: null,

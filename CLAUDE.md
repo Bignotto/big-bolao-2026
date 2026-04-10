@@ -180,6 +180,30 @@ Big Bolão is a sports betting/pool game where users:
 }
 ```
 
+### MatchPredictionStatus
+
+Returned by `GET /matches/:matchId/predictions/me`. Represents the authenticated user's prediction status for a match across all their pools.
+
+```ts
+{
+  poolId: number;
+  poolName: string;
+  matchId: number;
+  prediction: {
+    id: number;
+    predictedHomeScore: number;
+    predictedAwayScore: number;
+    predictedHasExtraTime: boolean;
+    predictedHasPenalties: boolean;
+    predictedPenaltyHomeScore: number | null;
+    predictedPenaltyAwayScore: number | null;
+    pointsEarned: number | null; // null until matchStatus === "COMPLETED"
+    submittedAt: string;
+    updatedAt: string | null;
+  } | null; // null means the user has NOT submitted a prediction for this pool yet
+}
+```
+
 ### Leaderboard Entry
 
 ```ts
@@ -325,11 +349,62 @@ Big Bolão is a sports betting/pool game where users:
 
 ### Matches
 
-| Method | Path                            | Auth | Description                      |
-| ------ | ------------------------------- | ---- | -------------------------------- |
-| GET    | `/matches/:matchId`             | Yes  | Get match details                |
-| GET    | `/matches/:matchId/predictions` | Yes  | All predictions for a match      |
-| PUT    | `/matches/:matchId`             | Yes  | Update match result (ADMIN only) |
+| Method | Path                               | Auth | Description                                                               |
+| ------ | ---------------------------------- | ---- | ------------------------------------------------------------------------- |
+| GET    | `/matches/:matchId`                | Yes  | Get match details                                                         |
+| GET    | `/matches/:matchId/predictions`    | Yes  | All predictions for a match (all users)                                   |
+| GET    | `/matches/:matchId/predictions/me` | Yes  | Authenticated user's prediction status across all their pools (see below) |
+| PUT    | `/matches/:matchId`                | Yes  | Update match result (ADMIN only)                                          |
+
+**GET /matches/:matchId/predictions/me**
+
+Returns one entry per pool the user actively participates in for the match's tournament. `prediction` is `null` when the user has not submitted a prediction for that pool yet — use this to surface "you haven't predicted this match" prompts.
+
+```json
+// Response 200
+{
+  "predictions": [
+    {
+      "poolId": 1,
+      "poolName": "Bolão da Família",
+      "matchId": 42,
+      "prediction": {
+        "id": 12,
+        "predictedHomeScore": 2,
+        "predictedAwayScore": 1,
+        "predictedHasExtraTime": false,
+        "predictedHasPenalties": false,
+        "predictedPenaltyHomeScore": null,
+        "predictedPenaltyAwayScore": null,
+        "pointsEarned": null,
+        "submittedAt": "2026-03-10T14:00:00Z",
+        "updatedAt": null
+      }
+    },
+    {
+      "poolId": 7,
+      "poolName": "Bolão do Trabalho",
+      "matchId": 42,
+      "prediction": null
+    }
+  ]
+}
+```
+
+```json
+// Response 200 — user belongs to no active pools for this tournament
+{ "predictions": [] }
+```
+
+> Never returns 404 for missing predictions — absence is a valid state represented by `prediction: null`.
+
+**Frontend usage:**
+
+```ts
+// Detect pools where the user hasn't predicted yet
+const pending = predictions.filter((p) => p.prediction === null);
+// pending.length > 0 → show "You haven't predicted this match in N pool(s)" prompt
+```
 
 **PUT /matches/:matchId (admin only)**
 
@@ -473,3 +548,4 @@ A user predicts **2-1** and the actual result is **3-1** in a `SEMI_FINAL`:
 6. **Role-aware UI** — hide admin controls (`PUT /matches/:matchId`) unless `user.role === "ADMIN"`
 7. **Invite flow** — use `GET /pool-invites/:code` to preview pool before `POST /pool-invites/:code` to join
 8. **Scoring display** — always show the `scoringRules` when users are submitting predictions so they understand the point values
+9. **Match list screen is prediction-free** — the global matches tab (`app/(tabs)/matches.tsx`) must NOT fetch predictions. It is a read-only agenda. Predictions are loaded only on the match detail screen via `GET /matches/:matchId/predictions/me`.
