@@ -68,6 +68,7 @@ function RootLayoutNav() {
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
               <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
               <Stack.Screen name="pool/[id]" options={{ headerShown: false }} />
+              <Stack.Screen name="match/[id]" options={{ headerShown: false }} />
             </Stack>
           </SessionProvider>
         </QueryClientProvider>

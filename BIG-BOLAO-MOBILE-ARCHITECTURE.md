@@ -154,6 +154,7 @@ Definida por ambiente
 - Pool
 - Match
 - Prediction
+- MatchPredictionStatus
 - LeaderboardEntry
 - Tournament
 - Team
@@ -168,6 +169,8 @@ Definida por ambiente
 - Regras de pontuação são retroativas
 - Apenas criador edita regras
 - Muitos campos podem ser `null`
+- A tela de lista de jogos NÃO carrega palpites — é uma agenda read-only
+- Palpites são carregados apenas na tela de detalhe do jogo
 
 ---
 
@@ -192,6 +195,7 @@ Definida por ambiente
 
 - getMatches
 - getMatchDetails
+- getMyMatchPredictions ← novo: carrega palpites do usuário para um jogo específico, agrupados por bolão
 
 ## Predictions
 
@@ -218,6 +222,25 @@ start
 → buscar meus bolões
 → listar pools
 → CTA criar/entrar
+
+---
+
+## Lista de Jogos (aba global)
+
+→ carregar partidas do torneio
+→ exibir agenda read-only (sem palpites)
+→ ao clicar em um jogo → navegar para tela de detalhe
+
+> ⚠️ NÃO carregar predictions nesta tela. O N+1 de predictions por jogo causa lentidão crítica.
+
+---
+
+## Detalhe do Jogo
+
+→ exibir dados do jogo (já disponíveis via navegação)
+→ chamar GET /matches/:matchId/predictions/me
+→ para cada bolão: exibir palpite ou prompt "Você ainda não apostou neste jogo"
+→ CTA para criar/editar palpite por bolão
 
 ---
 
@@ -273,6 +296,7 @@ start
 ['pool-standings', id]
 ['matches', tournamentId]
 ['match', id]
+['match-predictions-me', matchId] ← novo: palpites do usuário autenticado para um jogo específico
 ['predictions', poolId]
 
 ---
@@ -282,6 +306,25 @@ start
 - Revalidar ao focar tela
 - Pull-to-refresh
 - Polling leve (30–60s)
+
+---
+
+# 🧩 Hook: useMyMatchPredictions
+
+```ts
+// features/matches/hooks/useMyMatchPredictions.ts
+
+const useMyMatchPredictions = (matchId: number) =>
+  useQuery({
+    queryKey: ['match-predictions-me', matchId],
+    queryFn: () => api.get(`/matches/${matchId}/predictions/me`),
+  });
+
+// Uso na tela de detalhe:
+const { data } = useMyMatchPredictions(matchId);
+const pending = data?.predictions.filter((p) => p.prediction === null) ?? [];
+// pending.length > 0 → exibir alerta "Você ainda não apostou em N bolão(ões)"
+```
 
 ---
 
@@ -308,6 +351,7 @@ start
 - LeaderboardRow
 - ScoreInput
 - PredictionCard
+- MatchPredictionStatusCard ← novo: exibe palpite por bolão ou CTA de palpite pendente
 
 ---
 
@@ -317,6 +361,7 @@ start
 - Sempre tratar `null`
 - Mostrar estado "pendente" para pontos
 - Mostrar regras de pontuação sempre
+- Na tela de detalhe do jogo, `prediction: null` em um bolão deve renderizar um aviso visível e um CTA para submeter o palpite
 
 ---
 
@@ -353,6 +398,7 @@ start
 - não tratar cache
 - não tratar token expiração
 - usar DTO direto na tela
+- carregar predictions na lista global de jogos (N+1 crítico — ver regra na seção de fluxos)
 
 ---
 
