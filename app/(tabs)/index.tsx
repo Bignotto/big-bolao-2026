@@ -3,6 +3,7 @@ import styled from 'styled-components/native';
 import type { DefaultTheme } from 'styled-components/native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
+import { useTheme } from 'styled-components/native';
 
 import AppText from '@/components/AppComponents/AppText';
 import AppButton from '@/components/AppComponents/AppButton';
@@ -12,7 +13,8 @@ import { usePools, type Pool } from '@/hooks/usePools';
 
 export default function DashboardScreen() {
   const router = useRouter();
-  const { signOut } = useSession();
+  const theme = useTheme();
+  const { signOut, apiUser } = useSession();
   const { pools, loading, error, refresh } = usePools();
 
   function handleCreatePool() {
@@ -26,9 +28,14 @@ export default function DashboardScreen() {
   return (
     <Screen>
       <Header>
-        <AppText size="lg" bold>
-          Meus Grupos
-        </AppText>
+        <HeaderTitle>
+          <AppText size="lg" bold>
+            Meus Grupos
+          </AppText>
+          <AppText size="xsm" color={theme.colors.text_gray} numberOfLines={1}>
+            {apiUser?.fullName ?? 'Copa do Mundo 2026'}
+          </AppText>
+        </HeaderTitle>
         <AppButton
           title="Novo Grupo"
           variant="solid"
@@ -60,7 +67,7 @@ export default function DashboardScreen() {
             {error}
           </AppText>
           <AppSpacer verticalSpace="md" />
-          <AppButton title="Tentar novamente" variant="solid" size="sm" onPress={refresh} />
+          <AppButton title="Tentar novamente" variant="solid" size="sm" onPress={() => refresh()} />
         </CenteredView>
       )}
 
@@ -123,6 +130,10 @@ function PoolCard({ pool, onPress }: { pool: Pool; onPress: () => void }) {
       )}
 
       <AppSpacer verticalSpace="sm" />
+
+      <AppText size="xsm" color="#5B7485" style={{ marginTop: 4 }}>
+        Palpites, ranking e calendário
+      </AppText>
 
       <CardFooter>
         <FooterItem>
@@ -187,7 +198,7 @@ function EmptyPools({ onCreatePool, onFindPool }: { onCreatePool: () => void; on
 
 const Screen = styled.View<{ theme: DefaultTheme }>`
   flex: 1;
-  background-color: ${({ theme }) => theme.colors.background};
+  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.background};
 `;
 
 const Header = styled.View`
@@ -197,15 +208,20 @@ const Header = styled.View`
   padding: 16px 16px 12px;
 `;
 
+const HeaderTitle = styled.View`
+  flex: 1;
+  margin-right: 12px;
+`;
+
 const FindPoolBar = styled.View<{ theme: DefaultTheme }>`
   padding: 12px 16px 16px;
-  background-color: ${({ theme }) => theme.colors.background};
+  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.background};
   border-top-width: 1px;
   border-top-color: #eaeeef;
 `;
 
 const CardPressable = styled(Pressable)<{ theme: DefaultTheme }>`
-  background-color: ${({ theme }) => theme.colors.white};
+  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.white};
   border-radius: 12px;
   padding: 16px;
 `;
@@ -222,7 +238,7 @@ const BadgeRow = styled.View`
 `;
 
 const AdminBadge = styled.View<{ theme: DefaultTheme }>`
-  background-color: ${({ theme }) => theme.colors.primary_light}33;
+  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.primary_light}33;
   border-radius: 20px;
   padding: 2px 8px;
 `;

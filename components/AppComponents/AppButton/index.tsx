@@ -1,5 +1,5 @@
 import { ReactNode, useState } from 'react';
-import { ActivityIndicator, PressableProps, View } from 'react-native';
+import { ActivityIndicator, GestureResponderEvent, PressableProps, View } from 'react-native';
 import { useTheme } from 'styled-components/native';
 import AppText from '../AppText';
 import { ButtonContainer } from './styles';
@@ -66,12 +66,12 @@ export default function AppButton({
       outline={outline}
       size={size}
       style={{ opacity: pressed && !disabled && !isLoading ? 0.75 : 1 }}
-      onPressIn={(e) => {
+      onPressIn={(e: GestureResponderEvent) => {
         if (isLoading) return;
         setPressed(true);
         onPressIn?.(e);
       }}
-      onPressOut={(e) => {
+      onPressOut={(e: GestureResponderEvent) => {
         if (isLoading) return;
         setPressed(false);
         onPressOut?.(e);

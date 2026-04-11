@@ -4,7 +4,7 @@ import { apiFetch } from '@/lib/apiClient';
 type User = {
   id: string;
   email: string;
-  name: string;
+  fullName: string;
   profileImageUrl: string | null;
   role: 'USER' | 'ADMIN';
   createdAt: string;

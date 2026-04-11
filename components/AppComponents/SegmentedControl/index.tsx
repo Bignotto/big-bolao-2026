@@ -1,6 +1,6 @@
 import React from 'react';
 import { Pressable, ScrollView } from 'react-native';
-import styled, { useTheme } from 'styled-components/native';
+import styled, { type DefaultTheme } from 'styled-components/native';
 import { RFValue } from 'react-native-responsive-fontsize';
 import { TextSizes, Spaces, BorderRadius } from '@/constants/tokens';
 
@@ -21,7 +21,7 @@ const Outer = styled.View`
 `;
 
 const SegmentPill = styled.View<{ active: boolean }>`
-  background-color: ${({ theme, active }) =>
+  background-color: ${({ theme, active }: { active: boolean; theme: DefaultTheme }) =>
     active ? theme.colors.primary : theme.colors.shape_light};
   border-radius: ${BorderRadius.sm}px;
   padding-vertical: ${Spaces.sm}px;
@@ -30,10 +30,10 @@ const SegmentPill = styled.View<{ active: boolean }>`
 `;
 
 const SegmentLabel = styled.Text<{ active: boolean }>`
-  font-family: ${({ theme, active }) =>
+  font-family: ${({ theme, active }: { active: boolean; theme: DefaultTheme }) =>
     active ? theme.fonts.bold : theme.fonts.regular};
   font-size: ${RFValue(TextSizes.sm)}px;
-  color: ${({ theme, active }) =>
+  color: ${({ theme, active }: { active: boolean; theme: DefaultTheme }) =>
     active ? theme.colors.white : theme.colors.text_gray};
 `;
 

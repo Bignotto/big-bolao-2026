@@ -24,8 +24,10 @@ export function useMatches(filters?: MatchFilters) {
   });
 
   return {
+    data: query.data ?? [],
     matches: query.data ?? [],
     isLoading: query.isLoading,
+    isFetching: query.isFetching,
     isError: query.isError,
     refetch: query.refetch,
   };

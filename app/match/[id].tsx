@@ -47,6 +47,14 @@ const PredictionsSection = styled.View`
   padding-vertical: ${Spaces.md}px;
 `;
 
+const MissingBanner = styled.View`
+  flex-direction: row;
+  align-items: center;
+  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.primary_light}33;
+  border-radius: 8px;
+  padding: ${Spaces.sm}px ${Spaces.md}px;
+`;
+
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function MatchDetailScreen() {
@@ -57,6 +65,8 @@ export default function MatchDetailScreen() {
 
   const { data: match, isLoading: matchLoading, isError, refetch } = useMatch(matchId);
   const { data: predictions, isLoading: predictionsLoading } = useMyMatchPredictions(matchId);
+  const missingPredictionsCount =
+    predictions?.filter((entry) => entry.prediction === null).length ?? 0;
 
   function handleNavigateToPredictionForm(poolId: number, mId: number) {
     router.push(`/pool/${poolId}/predict?matchId=${mId}`);
@@ -115,6 +125,19 @@ export default function MatchDetailScreen() {
           <AppText size="xsm" color={theme.colors.text_gray}>
             MEUS PALPITES POR BOLÃO
           </AppText>
+
+          {!predictionsLoading && missingPredictionsCount > 0 && (
+            <>
+              <AppSpacer verticalSpace="xsm" />
+              <MissingBanner>
+                <Ionicons name="alert-circle-outline" size={18} color={theme.colors.primary} />
+                <AppText size="sm" color={theme.colors.primary} style={{ marginLeft: 8, flex: 1 }}>
+                  Falta apostar em {missingPredictionsCount}{' '}
+                  {missingPredictionsCount === 1 ? 'bolão' : 'bolões'}.
+                </AppText>
+              </MissingBanner>
+            </>
+          )}
 
           <AppSpacer verticalSpace="sm" />
 

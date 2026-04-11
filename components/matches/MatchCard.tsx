@@ -1,5 +1,5 @@
 import { Image, Pressable, View } from 'react-native';
-import styled, { useTheme } from 'styled-components/native';
+import styled, { useTheme, type DefaultTheme } from 'styled-components/native';
 import AppText from '@/components/AppComponents/AppText';
 import { Match } from '@/domain/entities/Match';
 import { BorderRadius } from '@/constants/tokens';
@@ -15,7 +15,7 @@ interface Props {
 const Card = styled(Pressable)`
   flex-direction: row;
   align-items: center;
-  background-color: ${({ theme }) => theme.colors.white};
+  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.white};
   border-radius: ${BorderRadius.md}px;
   padding: 12px 8px;
 `;
@@ -35,7 +35,7 @@ const CenterBlock = styled(View)`
 const Separator = styled(View)`
   width: 40px;
   height: 0.5px;
-  background-color: ${({ theme }) => theme.colors.border};
+  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.border};
   margin-top: 4px;
 `;
 
@@ -44,7 +44,7 @@ const FlagImage = styled(Image)`
   height: 24px;
   border-radius: 3px;
   border-width: 0.5px;
-  border-color: ${({ theme }) => theme.colors.border};
+  border-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.border};
 `;
 
 // ─── Flag sub-component ───────────────────────────────────────────────────────

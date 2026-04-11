@@ -19,6 +19,7 @@ export function mapMatch(dto: MatchDTO): Match {
     homeTeam: mapTeam(dto.homeTeam),
     awayTeam: mapTeam(dto.awayTeam),
     matchDatetime: dto.matchDatetime,
+    stadium: dto.stadium,
     stage: dto.stage as MatchStage,
     group: dto.group,
     homeTeamScore: dto.homeTeamScore,

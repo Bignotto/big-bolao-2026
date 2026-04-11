@@ -283,7 +283,7 @@ export default function FindPoolScreen() {
               <CodeInput
                 placeholder="Ex: BOLAO2026"
                 value={codeQuery}
-                onChangeText={(t) => setCodeQuery(t.toUpperCase())}
+                onChangeText={(t: string) => setCodeQuery(t.toUpperCase())}
                 autoCapitalize="characters"
                 autoFocus
                 returnKeyType="search"
@@ -410,7 +410,7 @@ export default function FindPoolScreen() {
 
 const Screen = styled.View<{ theme: DefaultTheme }>`
   flex: 1;
-  background-color: ${({ theme }) => theme.colors.background};
+  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.background};
 `;
 
 const ScreenHeader = styled.View`
@@ -430,7 +430,7 @@ const SegmentButton = styled(Pressable)<{ active: boolean }>`
   align-items: center;
   padding: 8px 0;
   border-radius: 8px;
-  background-color: ${({ active }) => (active ? '#065894' : 'transparent')};
+  background-color: ${({ active }: { active: boolean }) => (active ? '#065894' : 'transparent')};
 `;
 
 const SearchRow = styled.View`
@@ -464,7 +464,7 @@ const CenteredView = styled.View`
 `;
 
 const CardPressable = styled(Pressable)<{ theme: DefaultTheme }>`
-  background-color: ${({ theme }) => theme.colors.white};
+  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.white};
   border-radius: 12px;
   padding: 16px;
 `;
@@ -516,7 +516,7 @@ const CodeInput = styled(TextInput)`
 `;
 
 const PreviewCard = styled.View<{ theme: DefaultTheme }>`
-  background-color: ${({ theme }) => theme.colors.white};
+  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.white};
   border-radius: 12px;
   padding: 16px;
 `;

@@ -7,7 +7,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import styled, { useTheme } from 'styled-components/native';
+import styled, { useTheme, type DefaultTheme } from 'styled-components/native';
 
 import { usePool } from '@/hooks/usePool';
 import { usePoolStandings } from '@/hooks/usePoolStandings';
@@ -51,7 +51,7 @@ const STATUS_SEGMENTS: Segment<StatusFilter>[] = [
 
 const Root = styled(SafeAreaView)`
   flex: 1;
-  background-color: ${({ theme }) => theme.colors.background};
+  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.background};
 `;
 
 const HeaderArea = styled.View`
@@ -250,7 +250,7 @@ export default function PoolDetailsScreen() {
           <AppButton
             title="Tentar novamente"
             variant="transparent"
-            onPress={poolRefresh}
+            onPress={() => poolRefresh()}
           />
         </CenteredFill>
       </Root>
@@ -263,12 +263,12 @@ export default function PoolDetailsScreen() {
     if (!isMatchLocked(match)) {
       router.push(`/pool/${id}/predict?matchId=${match.id}`);
     } else {
-      router.push(`/pool/${id}/match/${match.id}`);
+      router.push(`/match/${match.id}`);
     }
   }
 
   function handleMatchesPress(match: Match) {
-    router.push(`/pool/${id}/match/${match.id}`);
+    router.push(`/match/${match.id}`);
   }
 
   // ── Render ───────────────────────────────────────────────────────────────────
@@ -286,6 +286,9 @@ export default function PoolDetailsScreen() {
             <AppText size="sm" color={theme.colors.text_gray}>
               {pool.participantsCount} participante
               {pool.participantsCount !== 1 ? 's' : ''}
+            </AppText>
+            <AppText size="xsm" color={theme.colors.text_disabled}>
+              Palpites, ranking e calendário do grupo
             </AppText>
             {pool.registrationDeadline != null && (
               <AppText size="xsm" color={theme.colors.text_disabled}>

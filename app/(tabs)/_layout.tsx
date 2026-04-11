@@ -35,6 +35,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="two"
         options={{
+          href: null,
           title: 'Tab Two',
           tabBarIcon: ({ color }) => <TabBarIcon name="code" color={color} />,
         }}
@@ -42,6 +43,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="components"
         options={{
+          href: null,
           title: 'Components',
           tabBarIcon: ({ color }) => <TabBarIcon name="cube" color={color} />,
         }}

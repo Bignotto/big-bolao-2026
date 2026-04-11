@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/apiClient';
 import { predictionKeys } from './predictionKeys';
+import { matchKeys } from './matchKeys';
 import type { Prediction, PredictionPayload } from '@/domain/entities/Prediction';
 
 export function useUpsertPrediction(poolId: number) {
@@ -71,8 +72,9 @@ export function useUpsertPrediction(poolId: number) {
       }
     },
 
-    onSettled: () => {
+    onSettled: (_data, _error, payload) => {
       queryClient.invalidateQueries({ queryKey: predictionKeys.byPool(poolId) });
+      queryClient.invalidateQueries({ queryKey: matchKeys.predictionsMe(payload.matchId) });
     },
   });
 }
