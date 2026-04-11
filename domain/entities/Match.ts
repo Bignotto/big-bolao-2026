@@ -18,6 +18,7 @@ export interface Match {
   matchDatetime: string; // ISO 8601
   stage: MatchStage;
   group: string | null;
+  stadium: string | null;
   homeTeamScore: number | null;
   awayTeamScore: number | null;
   matchStatus: MatchStatus;

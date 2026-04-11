@@ -10,4 +10,6 @@ export const matchKeys = {
     [...matchKeys.all, 'tournament', tournamentId, filters ?? {}] as const,
   detail: (matchId: number) =>
     [...matchKeys.all, 'detail', matchId] as const,
+  predictionsMe: (matchId: number) =>
+    [...matchKeys.all, 'predictions-me', matchId] as const,
 } as const;
