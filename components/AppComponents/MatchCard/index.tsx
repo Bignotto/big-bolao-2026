@@ -76,15 +76,15 @@ function TeamDisplay({ team }: { team: Team | undefined | null }) {
     );
   }
 
-  const hasFlag = team.flagUrl != null;
-  const hasCode = team.countryCode != null && team.countryCode.length > 0;
+  const hasFlag = !!team.flagUrl;
+  const hasCode = !!team.countryCode;
 
   return (
     <TeamCol>
       {hasFlag && (
         <Image
-          source={{ uri: team.flagUrl! }}
-          style={{ width: 24, height: 24, borderRadius: 12, marginBottom: 4 }}
+          source={{ uri: team.flagUrl }}
+          style={{ width: 32, height: 21, borderRadius: 2, marginBottom: 4 }}
         />
       )}
       <Txt

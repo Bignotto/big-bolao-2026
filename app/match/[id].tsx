@@ -134,7 +134,7 @@ function TeamDisplay({ team }: { team: Team | undefined | null }) {
       {team.flagUrl ? (
         <Image
           source={{ uri: team.flagUrl }}
-          style={{ width: 48, height: 48, borderRadius: 24 }}
+          style={{ width: 60, height: 40, borderRadius: 3 }}
         />
       ) : null}
       <Txt

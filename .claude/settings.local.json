@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx expo install @tanstack/react-query)"
+      "Bash(npx expo install @tanstack/react-query)",
+      "mcp__plugin_context-mode_context-mode__ctx_doctor",
+      "mcp__plugin_context-mode_context-mode__ctx_batch_execute"
     ]
   }
 }
