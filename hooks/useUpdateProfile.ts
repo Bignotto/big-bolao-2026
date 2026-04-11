@@ -7,14 +7,14 @@ import { meKeys } from './useMe';
 type User = {
   id: string;
   email: string;
-  name: string;
+  fullName: string;
   profileImageUrl: string | null;
   role: 'USER' | 'ADMIN';
   createdAt: string;
 };
 
 type UpdateProfilePayload = {
-  name: string;
+  fullName: string;
 };
 
 export function useUpdateProfile(userId: string) {
@@ -47,6 +47,6 @@ export function useLogout() {
   return async () => {
     await supabase.auth.signOut();
     queryClient.clear();       // wipe cache before redirect to prevent stale flash
-    router.replace('/login');
+    router.replace('/(auth)/login');
   };
 }

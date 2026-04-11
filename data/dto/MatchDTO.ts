@@ -11,6 +11,7 @@ export interface MatchDTO {
   homeTeam: TeamDTO;
   awayTeam: TeamDTO;
   matchDatetime: string;
+  stadium: string | null;
   stage: string;
   group: string | null;
   homeTeamScore: number | null;

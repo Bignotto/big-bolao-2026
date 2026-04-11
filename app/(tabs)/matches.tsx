@@ -9,7 +9,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import styled, { useTheme } from 'styled-components/native';
+import styled, { useTheme, type DefaultTheme } from 'styled-components/native';
 
 import { useMatches } from '@/hooks/useMatches';
 import type { Match } from '@/domain/entities/Match';
@@ -87,11 +87,11 @@ function getModeBSubtext(match: Match): string {
 
 const Root = styled(SafeAreaView)`
   flex: 1;
-  background-color: ${({ theme }) => theme.colors.background};
+  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.background};
 `;
 
 const FixedTop = styled.View`
-  background-color: ${({ theme }) => theme.colors.white};
+  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.white};
 `;
 
 const TitleArea = styled.View`
@@ -104,8 +104,9 @@ const ChipItem = styled(Pressable)<{ $active: boolean }>`
   padding-vertical: ${Spaces.sm}px;
   border-radius: ${BorderRadius.xlg}px;
   border-width: 1px;
-  border-color: ${({ theme, $active }) => ($active ? theme.colors.primary : theme.colors.border)};
-  background-color: ${({ theme, $active }) =>
+  border-color: ${({ theme, $active }: { $active: boolean; theme: DefaultTheme }) =>
+    $active ? theme.colors.primary : theme.colors.border};
+  background-color: ${({ theme, $active }: { $active: boolean; theme: DefaultTheme }) =>
     $active ? theme.colors.primary : theme.colors.white};
   margin-right: ${Spaces.xsm}px;
 `;
@@ -116,8 +117,9 @@ const DatePill = styled(Pressable)<{ $active: boolean }>`
   padding-vertical: ${Spaces.sm}px;
   border-radius: ${BorderRadius.md}px;
   border-width: 1px;
-  border-color: ${({ theme, $active }) => ($active ? theme.colors.primary : theme.colors.border)};
-  background-color: ${({ theme, $active }) =>
+  border-color: ${({ theme, $active }: { $active: boolean; theme: DefaultTheme }) =>
+    $active ? theme.colors.primary : theme.colors.border};
+  background-color: ${({ theme, $active }: { $active: boolean; theme: DefaultTheme }) =>
     $active ? theme.colors.primary : theme.colors.white};
   margin-right: ${Spaces.xsm}px;
 `;
@@ -129,13 +131,13 @@ const SectionHeaderRow = styled.View`
   padding-horizontal: ${Spaces.md}px;
   padding-top: ${Spaces.md}px;
   padding-bottom: ${Spaces.sm}px;
-  background-color: ${({ theme }) => theme.colors.background};
+  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.background};
 `;
 
 const SectionLine = styled.View`
   flex: 1;
   height: 1px;
-  background-color: ${({ theme }) => theme.colors.border};
+  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.border};
 `;
 
 const CenteredFill = styled.View`

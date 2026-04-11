@@ -1,6 +1,6 @@
 import { rgba } from 'polished';
 import { Pressable, PressableProps } from 'react-native';
-import styled from 'styled-components/native';
+import styled, { type DefaultTheme } from 'styled-components/native';
 
 interface ButtonContainerProps extends PressableProps {
   color: string;
@@ -16,7 +16,7 @@ export const ButtonContainer = styled(Pressable)<ButtonContainerProps>`
   height: ${({ size = 'md' }) => (size === 'lg' ? 64 : size === 'md' ? 54 : 46)}px;
   border-radius: 14px;
   border-width: 1px;
-  border-color: ${({ theme, outline, color, enabled = true }) =>
+  border-color: ${({ theme, outline, color, enabled = true }: ButtonContainerProps & { theme: DefaultTheme }) =>
     outline
       ? rgba(color, 0.2)
       : !enabled
@@ -25,6 +25,6 @@ export const ButtonContainer = styled(Pressable)<ButtonContainerProps>`
       ? theme.colors.text_disabled
       : color};
   padding: 2px;
-  background-color: ${({ theme, outline, color, enabled = true }) =>
+  background-color: ${({ theme, outline, color, enabled = true }: ButtonContainerProps & { theme: DefaultTheme }) =>
     outline ? rgba(color, 0.2) : enabled ? color : theme.colors.text_disabled};
 `;

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, SafeAreaView, ScrollView } from 'react-native';
-import styled, { useTheme } from 'styled-components/native';
+import styled, { useTheme, type DefaultTheme } from 'styled-components/native';
 
 import { useMe } from '@/hooks/useMe';
 import { useUpdateProfile, useLogout } from '@/hooks/useUpdateProfile';
@@ -17,7 +17,7 @@ import { Spaces, LogoSizes } from '@/constants/tokens';
 
 const Root = styled(SafeAreaView)`
   flex: 1;
-  background-color: ${({ theme }) => theme.colors.background};
+  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.background};
 `;
 
 const CenteredFill = styled.View`
@@ -55,10 +55,10 @@ export default function ProfileScreen() {
 
   // Initialise name from loaded user
   useEffect(() => {
-    if (user?.name && name === '') {
-      setName(user.name);
+    if (user?.fullName && name === '') {
+      setName(user.fullName);
     }
-  }, [user?.name]);
+  }, [user?.fullName]);
 
   // ── Loading ──────────────────────────────────────────────────────────────────
 
@@ -76,7 +76,7 @@ export default function ProfileScreen() {
 
   function handleSave() {
     mutation.mutate(
-      { name },
+      { fullName: name.trim() },
       {
         onSuccess: () => Alert.alert('Salvo!', 'Perfil atualizado.'),
         onError: (e) => Alert.alert('Erro', (e as Error).message),
@@ -91,7 +91,7 @@ export default function ProfileScreen() {
     ]);
   }
 
-  const hasChanges = name !== user.name && name.trim().length > 0;
+  const hasChanges = name.trim() !== user.fullName && name.trim().length > 0;
 
   // ── Render ───────────────────────────────────────────────────────────────────
 
@@ -110,14 +110,14 @@ export default function ProfileScreen() {
           />
           <AppSpacer verticalSpace="sm" />
           <AppText size="md" bold align="center">
-            {user.name}
+            {user.fullName}
           </AppText>
           <AppText size="sm" color={theme.colors.text_gray} align="center">
             {user.email}
           </AppText>
           <AppSpacer verticalSpace="xsm" />
           <AppText size="xsm" color={theme.colors.text_disabled} align="center">
-            (troca de avatar em breve)
+            Avatar vindo da sua conta de login
           </AppText>
         </AvatarSection>
 

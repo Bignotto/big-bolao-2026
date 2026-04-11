@@ -190,7 +190,7 @@ export default function CreatePoolScreen() {
 
 const Screen = styled.View<{ theme: DefaultTheme }>`
   flex: 1;
-  background-color: ${({ theme }) => theme.colors.background};
+  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.background};
 `;
 
 const SectionLabel = styled.View`

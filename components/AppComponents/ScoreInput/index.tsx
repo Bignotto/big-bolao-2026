@@ -1,6 +1,6 @@
 import React from 'react';
 import { TextInput } from 'react-native';
-import styled, { useTheme } from 'styled-components/native';
+import styled, { useTheme, type DefaultTheme } from 'styled-components/native';
 import { Ionicons } from '@expo/vector-icons';
 import { RFValue } from 'react-native-responsive-fontsize';
 import { TextSizes, Spaces, BorderRadius, IconSizes } from '@/constants/tokens';
@@ -29,9 +29,9 @@ const TeamCol = styled.View`
 `;
 
 const TeamName = styled.Text`
-  font-family: ${({ theme }) => theme.fonts.regular};
+  font-family: ${({ theme }: { theme: DefaultTheme }) => theme.fonts.regular};
   font-size: ${RFValue(TextSizes.sm)}px;
-  color: ${({ theme }) => theme.colors.text_gray};
+  color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.text_gray};
   max-width: 120px;
   margin-bottom: ${Spaces.sm}px;
 `;
@@ -41,18 +41,18 @@ const InputBox = styled.View<{ locked: boolean }>`
   height: 64px;
   border-radius: ${BorderRadius.md}px;
   border-width: 1.5px;
-  border-color: ${({ theme, locked }) =>
+  border-color: ${({ theme, locked }: { locked: boolean; theme: DefaultTheme }) =>
     locked ? theme.colors.border : theme.colors.primary};
-  background-color: ${({ theme, locked }) =>
+  background-color: ${({ theme, locked }: { locked: boolean; theme: DefaultTheme }) =>
     locked ? theme.colors.shape_light : theme.colors.white};
   align-items: center;
   justify-content: center;
 `;
 
 const Separator = styled.Text`
-  font-family: ${({ theme }) => theme.fonts.light};
+  font-family: ${({ theme }: { theme: DefaultTheme }) => theme.fonts.light};
   font-size: ${RFValue(TextSizes.lg)}px;
-  color: ${({ theme }) => theme.colors.text_gray};
+  color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.text_gray};
   margin-horizontal: ${Spaces.md}px;
 `;
 
@@ -65,9 +65,9 @@ const LockBanner = styled.View`
 `;
 
 const LockLabel = styled.Text`
-  font-family: ${({ theme }) => theme.fonts.regular};
+  font-family: ${({ theme }: { theme: DefaultTheme }) => theme.fonts.regular};
   font-size: ${RFValue(TextSizes.xsm)}px;
-  color: ${({ theme }) => theme.colors.text_disabled};
+  color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.text_disabled};
 `;
 
 export default function ScoreInput({

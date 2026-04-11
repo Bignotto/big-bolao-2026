@@ -1,6 +1,7 @@
 import React from 'react';
+import type { PressableStateCallbackType } from 'react-native';
 import { Image, Pressable } from 'react-native';
-import styled from 'styled-components/native';
+import styled, { type DefaultTheme } from 'styled-components/native';
 import { Ionicons } from '@expo/vector-icons';
 import { RFValue } from 'react-native-responsive-fontsize';
 import { rgba } from 'polished';
@@ -12,11 +13,11 @@ import type { Prediction } from '@/domain/entities/Prediction';
 // ─── Card shell ───────────────────────────────────────────────────────────────
 
 const CardPressable = styled.Pressable`
-  background-color: ${({ theme }) => theme.colors.white};
+  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.white};
   border-radius: ${BorderRadius.md}px;
   padding: ${Spaces.md}px;
   border-bottom-width: 1px;
-  border-bottom-color: ${({ theme }) => theme.colors.border};
+  border-bottom-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.border};
 `;
 
 // ─── Generic text atoms ───────────────────────────────────────────────────────
@@ -27,10 +28,12 @@ const Txt = styled.Text<{
   font?: string;
   align?: 'left' | 'center' | 'right';
 }>`
-  font-family: ${({ theme, font }) => font ?? theme.fonts.regular};
-  font-size: ${({ size }) => RFValue(size ?? TextSizes.sm)}px;
-  color: ${({ theme, color }) => color ?? theme.colors.text};
-  text-align: ${({ align }) => align ?? 'left'};
+  font-family: ${({ theme, font }: { theme: DefaultTheme; font?: string }) =>
+    font ?? theme.fonts.regular};
+  font-size: ${({ size }: { size?: number }) => RFValue(size ?? TextSizes.sm)}px;
+  color: ${({ theme, color }: { theme: DefaultTheme; color?: string }) =>
+    color ?? theme.colors.text};
+  text-align: ${({ align }: { align?: 'left' | 'center' | 'right' }) => align ?? 'left'};
 `;
 
 // ─── Row helpers ──────────────────────────────────────────────────────────────
@@ -38,7 +41,7 @@ const Txt = styled.Text<{
 const Row = styled.View<{ justify?: string }>`
   flex-direction: row;
   align-items: center;
-  justify-content: ${({ justify }) => justify ?? 'space-between'};
+  justify-content: ${({ justify }: { justify?: string }) => justify ?? 'space-between'};
 `;
 
 const CenterCol = styled.View`
@@ -55,7 +58,7 @@ const TeamCol = styled.View`
 // ─── Badge ────────────────────────────────────────────────────────────────────
 
 const Badge = styled.View<{ bg: string }>`
-  background-color: ${({ bg }) => bg};
+  background-color: ${({ bg }: { bg: string }) => bg};
   border-radius: ${BorderRadius.xsm}px;
   padding-horizontal: ${Spaces.xsm}px;
   padding-vertical: 2px;
@@ -76,14 +79,15 @@ function TeamDisplay({ team }: { team: Team | undefined | null }) {
     );
   }
 
-  const hasFlag = !!team.flagUrl;
+  const flagUrl = team.flagUrl;
+  const hasFlag = !!flagUrl;
   const hasCode = !!team.countryCode;
 
   return (
     <TeamCol>
       {hasFlag && (
         <Image
-          source={{ uri: team.flagUrl }}
+          source={{ uri: flagUrl }}
           style={{ width: 32, height: 21, borderRadius: 2, marginBottom: 4 }}
         />
       )}
@@ -237,7 +241,7 @@ export default function MatchCard({ match, prediction, onPress }: MatchCardProps
   return (
     <CardPressable
       onPress={onPress}
-      style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+      style={({ pressed }: PressableStateCallbackType) => ({ opacity: pressed ? 0.7 : 1 })}
     >
       {matchStatus === 'IN_PROGRESS' && (
         <Badge bg="#FF872C">

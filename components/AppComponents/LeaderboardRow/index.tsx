@@ -1,5 +1,5 @@
 import React from 'react';
-import styled, { useTheme } from 'styled-components/native';
+import styled, { useTheme, type DefaultTheme } from 'styled-components/native';
 import { Ionicons } from '@expo/vector-icons';
 import { rgba } from 'polished';
 import { RFValue } from 'react-native-responsive-fontsize';
@@ -28,7 +28,7 @@ interface LeaderboardRowProps {
   rank: number;
 }
 
-function rowBackground(rank: number, isCurrentUser: boolean, theme: any): string {
+function rowBackground(rank: number, isCurrentUser: boolean, theme: DefaultTheme): string {
   if (isCurrentUser) return rgba(theme.colors.primary, 0.06);
   if (rank === 1) return rgba(theme.colors.secondary, 0.08);
   if (rank === 2 || rank === 3) return rgba(theme.colors.shape, 0.5);
@@ -40,9 +40,9 @@ const RowContainer = styled.View<{ bg: string }>`
   align-items: center;
   height: 60px;
   padding-horizontal: ${Spaces.md}px;
-  background-color: ${({ bg }) => bg};
+  background-color: ${({ bg }: { bg: string }) => bg};
   border-bottom-width: 0.5px;
-  border-bottom-color: ${({ theme }) => theme.colors.border};
+  border-bottom-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.border};
 `;
 
 const RankCell = styled.View`
@@ -72,7 +72,7 @@ const StatItem = styled.View`
   align-items: flex-end;
 `;
 
-function RankDisplay({ rank, theme }: { rank: number; theme: any }) {
+function RankDisplay({ rank, theme }: { rank: number; theme: DefaultTheme }) {
   if (rank === 1) {
     return (
       <Ionicons

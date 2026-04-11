@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Alert, ScrollView, ActivityIndicator, SafeAreaView } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import styled, { useTheme } from 'styled-components/native';
+import styled, { useTheme, type DefaultTheme } from 'styled-components/native';
 
 import { useMatch } from '@/hooks/useMatch';
 import { usePool } from '@/hooks/usePool';
@@ -22,6 +22,7 @@ import { Spaces, BorderRadius } from '@/constants/tokens';
 
 const STAGE_LABELS: Record<MatchStage, string> = {
   GROUP: 'Fase de Grupos',
+  ROUND_OF_32: 'Dezesseis avos',
   ROUND_OF_16: 'Oitavas de Final',
   QUARTER_FINAL: 'Quartas de Final',
   SEMI_FINAL: 'Semifinal',
@@ -52,7 +53,7 @@ function formatMatchDatetime(iso: string): string {
 
 const Root = styled(SafeAreaView)`
   flex: 1;
-  background-color: ${({ theme }) => theme.colors.background};
+  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.background};
 `;
 
 const CenteredFill = styled.View`
@@ -69,7 +70,7 @@ const MatchHeader = styled.View`
 `;
 
 const RulesBox = styled.View`
-  background-color: ${({ theme }) => theme.colors.shape_light};
+  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.shape_light};
   border-radius: ${BorderRadius.sm}px;
   padding: ${Spaces.sm}px;
   margin-horizontal: ${Spaces.md}px;
@@ -204,6 +205,11 @@ export default function PredictScreen() {
   // ── Submit ───────────────────────────────────────────────────────────────────
 
   function handleSubmit() {
+    if (!canSubmit) {
+      Alert.alert('Palpite inválido', 'Informe placares entre 0 e 99 para os dois times.');
+      return;
+    }
+
     const payload: PredictionPayload = {
       poolId: poolId!,
       matchId: matchId!,
@@ -224,6 +230,8 @@ export default function PredictScreen() {
   const canSubmit =
     homeValue.trim().length > 0 &&
     awayValue.trim().length > 0 &&
+    /^\d{1,2}$/.test(homeValue.trim()) &&
+    /^\d{1,2}$/.test(awayValue.trim()) &&
     !mutation.isPending;
 
   const rules = pool.scoringRules;
