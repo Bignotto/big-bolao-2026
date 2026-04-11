@@ -1,22 +1,16 @@
-export type MatchStage =
-  | 'GROUP'
-  | 'ROUND_OF_16'
-  | 'QUARTER_FINAL'
-  | 'SEMI_FINAL'
-  | 'THIRD_PLACE'
-  | 'LOSERS_MATCH'
-  | 'FINAL';
+import { MatchStage } from '../enums/MatchStage';
+import { MatchStatus } from '../enums/MatchStatus';
 
-export type MatchStatus = 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED' | 'POSTPONED';
+export type { MatchStage, MatchStatus };
 
-export type Team = {
+export interface Team {
   id: number;
   name: string;
   countryCode: string | null; // e.g. "BRA" — ISO 3-char code
   flagUrl: string | null;
-};
+}
 
-export type Match = {
+export interface Match {
   id: number;
   tournamentId: number;
   homeTeam: Team;
@@ -33,7 +27,7 @@ export type Match = {
   penaltyAwayScore: number | null;
   createdAt: string;
   updatedAt: string | null;
-};
+}
 
 // Helper — true when the match has already kicked off (use to lock predictions)
 export function isMatchLocked(match: Pick<Match, 'matchDatetime'>): boolean {

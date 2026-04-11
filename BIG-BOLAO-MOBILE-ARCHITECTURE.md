@@ -193,7 +193,7 @@ Definida por ambiente
 
 ## Matches
 
-- getMatches
+- getMatches(tournamentId) — carrega todas as partidas do torneio; filtragem feita client-side
 - getMatchDetails
 - getMyMatchPredictions ← novo: carrega palpites do usuário para um jogo específico, agrupados por bolão
 
@@ -294,9 +294,9 @@ start
 ['my-pools']
 ['pool', id]
 ['pool-standings', id]
-['matches', tournamentId]
+['matches', 'tournament', tournamentId, filters] ← carrega todas as partidas; filtragem client-side
 ['match', id]
-['match-predictions-me', matchId] ← novo: palpites do usuário autenticado para um jogo específico
+['match-predictions-me', matchId] ← palpites do usuário autenticado para um jogo específico
 ['predictions', poolId]
 
 ---
@@ -347,11 +347,45 @@ const pending = data?.predictions.filter((p) => p.prediction === null) ?? [];
 ## Domain Components
 
 - PoolCard
-- MatchCard
+- MatchCard — `components/matches/MatchCard`
+  - props: `match: Match`, `onPress: () => void`, `centerSubtext: string`
+  - center column: time (HH:mm) + centerSubtext + separator line
+  - flag image via `team.flagUrl`; when null renders a colored placeholder with countryCode initials
 - LeaderboardRow
 - ScoreInput
 - PredictionCard
 - MatchPredictionStatusCard ← novo: exibe palpite por bolão ou CTA de palpite pendente
+
+---
+
+## Tela de Partidas
+
+Arquivo: `app/(tabs)/matches.tsx`
+
+### Modos de visualização
+
+**Modo A — Por Grupo / Etapa** (padrão, abre em "Grupo A")
+
+- Chips horizontais: Grupo A–L + fases eliminatórias (Oitavas, Quartas, Semifinal, 3º lugar, Final)
+- Chip de grupo → `filterByGroup` + `groupByRound` → `SectionList` com headers "Grupo X · Rodada N"
+- Chip eliminatório → `filterByStage` → seção única com label de `STAGE_LABELS`
+- `centerSubtext` do MatchCard: data formatada "dd/MM"
+
+**Modo B — Por Data**
+
+- Pills horizontais com dia abreviado (ex: "Sex / 13") derivados de `getAvailableDates`
+- Data padrão: earliest date com pelo menos uma partida com `matchStatus !== COMPLETED`
+- `filterByDate` → `FlatList` sem seções
+- `centerSubtext` do MatchCard: `STAGE_LABELS[stage]` ou "Grupo X" para partidas de grupo
+
+### Filtragem client-side
+
+Toda filtragem ocorre no cliente. A API é chamada **uma única vez** com `GET /tournaments/:id/matches` (sem parâmetros de filtro). Trocar chip ou data não dispara novas requisições.
+
+### Flag de seleção de país
+
+- `team.flagUrl` presente → `<Image source={{ uri: flagUrl }} />`
+- `team.flagUrl` null → `<View>` colorido (cor `theme.colors.border`) com texto `countryCode` centralizado
 
 ---
 
