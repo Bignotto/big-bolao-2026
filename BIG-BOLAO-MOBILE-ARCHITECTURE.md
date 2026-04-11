@@ -1,491 +1,256 @@
-# 📱 Big Bolão 2026 — Mobile Architecture
+# Big Bolão 2026 — Mobile Architecture
 
-## 🎯 Objetivo
+## Objetivo
 
-Este documento define a arquitetura completa do app mobile **Big Bolão 2026**, incluindo:
+Este documento descreve a arquitetura atual do app mobile **Big Bolão 2026** e deve ser usado como referência para Codex, Claude Code e humanos.
 
-- Estrutura de código
-- Camadas arquiteturais
-- Fluxos principais
-- Regras de negócio
-- Padrões de implementação
+O app permite que usuários:
 
-Este documento deve ser usado como **fonte única de verdade** para desenvolvimento (Claude Code, Codex e humano).
-
----
-
-# 🧠 Visão Geral
-
-O app é um sistema de bolão esportivo onde usuários:
-
-- Criam ou entram em bolões
-- Fazem palpites por partida
-- Acumulam pontos
-- Competem em rankings
+- Criem ou entrem em bolões
+- Vejam a agenda da Copa do Mundo 2026
+- Façam palpites por partida e por bolão
+- Acompanhem pontuação e ranking
+- Editem regras de pontuação quando são donos do bolão
 
 ---
 
-# 🧱 Arquitetura
+## Stack Atual
 
-## Camadas
-
-Presentation → Application → Domain → Data → Infrastructure
-
-### 1. Presentation
-
-- Telas (screens)
-- Navegação (Expo Router)
-- Componentes visuais
-- Estado de UI
-
-### 2. Application
-
-- Casos de uso
-- Orquestração de fluxos
-- Coordenação entre UI e dados
-
-### 3. Domain
-
-- Entidades
-- Regras de negócio
-- Enums
-- Contratos de repositório
-
-### 4. Data
-
-- API REST
+- Expo + Expo Router
+- React Native + TypeScript strict
+- styled-components/native
+- TanStack Query
 - Supabase Auth
-- Cache
-- Mapeamento de DTOs
+- Expo SecureStore para sessão
+- Inter fonts via `@expo-google-fonts/inter`
+- `@expo/vector-icons`
 
-### 5. Infrastructure
+Verificação estática obrigatória:
 
-- HTTP client
-- Token refresh
-- Storage seguro
-- Configuração de ambiente
-
----
-
-# 🗂️ Estrutura de Pastas
-
-src/
-app/
-router/
-providers/
-config/
-
-features/
-auth/
-dashboard/
-pools/
-matches/
-predictions/
-profile/
-
-domain/
-entities/
-enums/
-helpers/
-contracts/
-
-data/
-api/
-client/
-dto/
-mappers/
-repositories/
-auth/
-storage/
-
-shared/
-components/
-theme/
-utils/
-types/
-
----
-
-# 🔐 Autenticação
-
-## Fluxo
-
-1. Login via Supabase
-2. Recebe JWT
-3. Salva token seguro
-4. Envia token para API
-
-Authorization: Bearer <token>
-
-## Regras
-
-- Sempre validar sessão no boot
-- Implementar refresh automático
-- Logout limpa tudo (cache + storage)
-
----
-
-# 🌐 API
-
-## Base URL
-
-Definida por ambiente
-
-## Headers
-
-{
-"Authorization": "Bearer <token>",
-"Content-Type": "application/json"
-}
-
-## Erros
-
-{
-"message": "Descrição do erro"
-}
-
----
-
-# 🧩 Domínio
-
-## Entidades
-
-- User
-- Pool
-- Match
-- Prediction
-- MatchPredictionStatus
-- LeaderboardEntry
-- Tournament
-- Team
-
----
-
-## Regras Críticas
-
-- 1 palpite por jogo por bolão
-- Palpites travam ao iniciar partida
-- Pontos só existem após jogo concluído
-- Regras de pontuação são retroativas
-- Apenas criador edita regras
-- Muitos campos podem ser `null`
-- A tela de lista de jogos NÃO carrega palpites — é uma agenda read-only
-- Palpites são carregados apenas na tela de detalhe do jogo
-
----
-
-# ⚙️ Casos de Uso
-
-## Auth
-
-- signIn
-- signUp
-- restoreSession
-- signOut
-
-## Pools
-
-- getMyPools
-- createPool
-- joinPool
-- getPoolDetails
-- getStandings
-
-## Matches
-
-- getMatches(tournamentId) — carrega todas as partidas do torneio; filtragem feita client-side
-- getMatchDetails
-- getMyMatchPredictions ← novo: carrega palpites do usuário para um jogo específico, agrupados por bolão
-
-## Predictions
-
-- createPrediction
-- updatePrediction
-- getMyPredictions
-
----
-
-# 🔄 Fluxos Principais
-
-## Boot do App
-
-start
-→ restore session
-→ refresh token
-→ get user
-→ navegar para app ou login
-
----
-
-## Dashboard
-
-→ buscar meus bolões
-→ listar pools
-→ CTA criar/entrar
-
----
-
-## Lista de Jogos (aba global)
-
-→ carregar partidas do torneio
-→ exibir agenda read-only (sem palpites)
-→ ao clicar em um jogo → navegar para tela de detalhe
-
-> ⚠️ NÃO carregar predictions nesta tela. O N+1 de predictions por jogo causa lentidão crítica.
-
----
-
-## Detalhe do Jogo
-
-→ exibir dados do jogo (já disponíveis via navegação)
-→ chamar GET /matches/:matchId/predictions/me
-→ para cada bolão: exibir palpite ou prompt "Você ainda não apostou neste jogo"
-→ CTA para criar/editar palpite por bolão
-
----
-
-## Criar Palpite
-
-→ carregar partidas
-→ carregar palpites existentes
-→ validar se jogo não começou
-→ salvar
-→ atualizar cache
-
----
-
-## Entrar em Bolão por Convite
-
-→ buscar pool por código
-→ mostrar preview
-→ confirmar entrada
-→ atualizar dashboard
-
----
-
-# 🧠 Estado
-
-## Server State (usar TanStack Query)
-
-- pools
-- matches
-- predictions
-- standings
-
-## Client State
-
-- auth session
-- user
-- settings
-
-## UI State
-
-- formulários
-- loading
-- modais
-
----
-
-# 📦 Cache
-
-## Query Keys
-
-['me']
-['my-pools']
-['pool', id]
-['pool-standings', id]
-['matches', 'tournament', tournamentId, filters] ← carrega todas as partidas; filtragem client-side
-['match', id]
-['match-predictions-me', matchId] ← palpites do usuário autenticado para um jogo específico
-['predictions', poolId]
-
----
-
-## Estratégia
-
-- Revalidar ao focar tela
-- Pull-to-refresh
-- Polling leve (30–60s)
-
----
-
-# 🧩 Hook: useMyMatchPredictions
-
-```ts
-// features/matches/hooks/useMyMatchPredictions.ts
-
-const useMyMatchPredictions = (matchId: number) =>
-  useQuery({
-    queryKey: ['match-predictions-me', matchId],
-    queryFn: () => api.get(`/matches/${matchId}/predictions/me`),
-  });
-
-// Uso na tela de detalhe:
-const { data } = useMyMatchPredictions(matchId);
-const pending = data?.predictions.filter((p) => p.prediction === null) ?? [];
-// pending.length > 0 → exibir alerta "Você ainda não apostou em N bolão(ões)"
+```sh
+npx tsc --noEmit
 ```
 
 ---
 
-# 🧪 Formulários
+## Estrutura Atual
 
-- react-hook-form
-- zod
+```text
+app/
+  _layout.tsx
+  (auth)/login.tsx
+  (tabs)/
+    _layout.tsx
+    index.tsx
+    matches.tsx
+    profile.tsx
+    create-pool.tsx
+    find-pool.tsx
+    two.tsx
+    components.tsx
+  match/[id].tsx
+  pool/[id]/
+    index.tsx
+    predict.tsx
+    settings.tsx
 
----
+components/
+  AppComponents/
+  matches/
 
-# 🎨 UI
+context/
+  SessionContext.tsx
 
-## Base Components
+data/
+  api/
+  dto/
+  mappers/
 
-- AppText
-- AppButton
-- AppInput
-- AppAvatar
+domain/
+  entities/
+  enums/
+  helpers/
 
-## Domain Components
+hooks/
+  *Keys.ts
+  use*.ts
 
-- PoolCard
-- MatchCard — `components/matches/MatchCard`
-  - props: `match: Match`, `onPress: () => void`, `centerSubtext: string`
-  - center column: time (HH:mm) + centerSubtext + separator line
-  - flag image via `team.flagUrl`; when null renders a colored placeholder with countryCode initials
-- TeamFlag — `components/matches/TeamFlag`
-  - props: `flagUrl: string | null`, `teamName: string`, `size?: 'sm' | 'md' | 'lg'`
-  - sizes: sm 32×24, md 56×42, lg 72×54; falls back to gray placeholder on null or error
-- MatchHeader — `components/matches/MatchHeader`
-  - props: `match: Match`
-  - dark hero card (primary_dark bg): metadata line (stage · group · stadium), teams+flags row, status badge (datetime / live pill / Encerrado / Adiado)
-- LeaderboardRow
-- ScoreInput
-- PredictionCard
-- MatchPredictionStatusCard — `components/AppComponents/MatchPredictionStatusCard`
-  - props: `poolName`, `poolId`, `matchId`, `matchStatus`, `prediction`, `userRank`, `homeTeamCode`, `awayTeamCode`, `onPressBet`
-  - resolves one of 5 variants: no-prediction-open, prediction-open, prediction-live, no-prediction-locked, prediction-completed
+lib/
+  apiClient.ts
+  queryClient.ts
+  supabase.ts
+  useAppFocusRefetch.ts
+```
 
----
-
-## Tela de Partidas
-
-Arquivo: `app/(tabs)/matches.tsx`
-
-### Modos de visualização
-
-**Modo A — Por Grupo / Etapa** (padrão, abre em "Grupo A")
-
-- Chips horizontais: Grupo A–L + fases eliminatórias (Oitavas, Quartas, Semifinal, 3º lugar, Final)
-- Chip de grupo → `filterByGroup` + `groupByRound` → `SectionList` com headers "Grupo X · Rodada N"
-- Chip eliminatório → `filterByStage` → seção única com label de `STAGE_LABELS`
-- `centerSubtext` do MatchCard: data formatada "dd/MM"
-
-**Modo B — Por Data**
-
-- Pills horizontais com dia abreviado (ex: "Sex / 13") derivados de `getAvailableDates`
-- Data padrão: earliest date com pelo menos uma partida com `matchStatus !== COMPLETED`
-- `filterByDate` → `FlatList` sem seções
-- `centerSubtext` do MatchCard: `STAGE_LABELS[stage]` ou "Grupo X" para partidas de grupo
-
-### Filtragem client-side
-
-Toda filtragem ocorre no cliente. A API é chamada **uma única vez** com `GET /tournaments/:id/matches` (sem parâmetros de filtro). Trocar chip ou data não dispara novas requisições.
-
-### Flag de seleção de país
-
-- `team.flagUrl` presente → `<Image source={{ uri: flagUrl }} />`
-- `team.flagUrl` null → `<View>` colorido (cor `theme.colors.border`) com texto `countryCode` centralizado
+Observação: a arquitetura desejada continua sendo orientada a domínio. O app ainda usa uma estrutura flat em `hooks/` e `app/`; uma migração para `features/*` deve ser feita só quando reduzir complexidade real.
 
 ---
 
-# ⚠️ Regras de UI
+## Camadas
 
-- Nunca confiar direto na API
-- Sempre tratar `null`
-- Mostrar estado "pendente" para pontos
-- Mostrar regras de pontuação sempre
-- Na tela de detalhe do jogo, `prediction: null` em um bolão deve renderizar um aviso visível e um CTA para submeter o palpite
+- **Presentation**: rotas em `app/`, componentes em `components/`, estado local de UI
+- **Application**: hooks de fluxo e TanStack Query em `hooks/`
+- **Domain**: entidades, enums e helpers em `domain/`
+- **Data**: DTOs, mappers e chamadas REST em `data/` e `lib/apiClient.ts`
+- **Infrastructure**: Supabase, SecureStore, QueryClient e app focus refetch em `lib/` e `context/`
 
----
+Regras:
 
-# 🔐 Segurança
-
-- Usar SecureStore
-- Nunca usar AsyncStorage para tokens
-- Limpar tudo no logout
-
----
-
-# 🌍 Ambientes
-
-- dev
-- staging
-- production
+- Não usar DTO direto na tela quando houver entidade/mapeador local
+- Sempre tratar `null` vindo da API
+- Manter lógica de domínio fora dos componentes visuais sempre que possível
+- Preferir `theme` e tokens aos hard-coded colors em novos códigos
 
 ---
 
-# 📡 Sync
+## Autenticação
 
-## NÃO usar realtime inicialmente
+Fluxo:
 
-## Usar:
+1. Login via Supabase (Google/Apple atualmente na UI)
+2. Supabase persiste sessão via SecureStore
+3. `SessionContext` busca `GET /users/me`
+4. Se o usuário não existe, `SessionContext` cria via `POST /users`
+5. O app envia `Authorization: Bearer <token>` pelo `apiFetch`
+6. Logout limpa Supabase + cache do TanStack Query e volta para `/(auth)/login`
 
-- refetch on focus
-- polling
+Modelo de usuário na UI deve seguir o backend:
 
----
-
-# 🚨 Riscos
-
-- misturar lógica com UI
-- não tratar cache
-- não tratar token expiração
-- usar DTO direto na tela
-- carregar predictions na lista global de jogos (N+1 crítico — ver regra na seção de fluxos)
-
----
-
-# 🛠️ Stack
-
-- Expo
-- React Native
-- TypeScript
-- TanStack Query
-- React Hook Form
-- Zod
-- SecureStore
+- `fullName`
+- `email`
+- `profileImageUrl`
+- `role`
 
 ---
 
-# 🚀 Roadmap
+## API e Cache
 
-## Fase 1
+`apiFetch` adiciona:
 
-- auth
-- http client
-- estrutura base
+```json
+{
+  "Authorization": "Bearer <token>",
+  "Content-Type": "application/json"
+}
+```
 
-## Fase 2
+Query keys principais:
 
-- pools
-- matches
-- predictions
+- `['me']`
+- `['pools', 'mine']`
+- `['pools', poolId]`
+- `['pools', poolId, 'standings']`
+- `['matches', 'tournament', tournamentId, filters]`
+- `['matches', 'detail', matchId]`
+- `['matches', 'predictions-me', matchId]`
+- `['predictions', 'pool', poolId]`
 
-## Fase 3
+Estratégia:
 
-- criação de bolão
-- convite
-- perfil
-
-## Fase 4
-
-- refinamento
-- performance
-- analytics
+- Revalidar ao focar o app
+- Pull-to-refresh em listas principais
+- Ranking com polling leve
+- Mutations de palpite invalidam o cache do pool e da tela de detalhe do jogo
 
 ---
 
-# 📌 Diretriz Final
+## Fluxos Principais
 
-> O app deve ser orientado a domínio, não a telas.
+### Dashboard
 
-Se precisar escolher entre rapidez e arquitetura correta, escolha arquitetura.
+- Busca os bolões do usuário
+- Exibe cards de grupo com quantidade de participantes e acesso a palpites/ranking/calendário
+- CTAs para criar grupo e buscar grupo
+
+### Lista Global de Partidas
+
+- Arquivo: `app/(tabs)/matches.tsx`
+- Busca todas as partidas com `GET /tournaments/:id/matches`
+- Filtra client-side por grupo/etapa ou por data
+- Não carrega palpites
+- Ao tocar em uma partida, navega para `/match/:id`
+
+Regra crítica: nunca adicionar chamadas de prediction nesta tela.
+
+### Detalhe Global do Jogo
+
+- Arquivo: `app/match/[id].tsx`
+- Busca o jogo por id
+- Busca `GET /matches/:matchId/predictions/me`
+- Mostra um card por bolão do usuário
+- Quando houver `prediction: null`, mostra aviso e CTA para apostar
+- Exibe banner com a quantidade de bolões pendentes
+
+### Detalhe do Bolão
+
+- Arquivo: `app/pool/[id]/index.tsx`
+- Abas: `Palpites`, `Ranking`, `Partidas`
+- `Palpites` e `Partidas` usam a lista de jogos do torneio
+- Palpites do usuário no bolão vêm de `GET /users/me/predictions?poolId=...`
+- Partidas bloqueadas navegam para `/match/:id`
+- Partidas abertas navegam para `/pool/:id/predict?matchId=:matchId`
+
+### Criar/Editar Palpite
+
+- Arquivo: `app/pool/[id]/predict.tsx`
+- Carrega o jogo, o bolão e a predição existente
+- Bloqueia edição quando `matchDatetime <= now`
+- Valida placares inteiros de 0 a 99
+- Mostra regras de pontuação do bolão
+- Salva via `POST /predictions` ou `PUT /predictions/:predictionId`
+
+### Criar e Encontrar Bolão
+
+- `app/(tabs)/create-pool.tsx`: cria bolão para o torneio fixo da Copa 2026
+- `app/(tabs)/find-pool.tsx`: busca por nome ou por invite code
+- Fluxo de convite: `GET /pool-invites/:code` para preview, depois `POST /pool-invites/:code` para entrar
+
+### Perfil
+
+- Arquivo: `app/(tabs)/profile.tsx`
+- Usa `GET /users/me`
+- Atualiza `fullName` via `PUT /users/:userId`
+- Avatar vem do provedor de login por enquanto
+
+### Regras de Pontuação
+
+- Arquivo: `app/pool/[id]/settings.tsx`
+- Somente dono do bolão
+- Mostra aviso de recálculo retroativo
+- Atualiza com `PUT /pools/:poolId/scoring-rules`
+- Invalida detalhe do pool e ranking
+
+---
+
+## Componentes de Domínio
+
+- `components/matches/MatchCard`: card da agenda global; sem prediction
+- `components/matches/MatchHeader`: hero do detalhe do jogo
+- `components/matches/TeamFlag`: flag remota com fallback
+- `components/AppComponents/MatchCard`: card pool-scoped com prediction/result status
+- `components/AppComponents/MatchPredictionStatusCard`: status do palpite por bolão no detalhe do jogo
+- `components/AppComponents/ScoreInput`: placar editável/bloqueado
+- `components/AppComponents/LeaderboardRow`: linha de ranking
+- `components/AppComponents/SegmentedControl`: abas/chips horizontais
+
+---
+
+## Regras de Negócio no Mobile
+
+- Um palpite por partida, bolão e usuário
+- Palpites só editáveis antes do início da partida
+- Pontos só são definitivos após `matchStatus === 'COMPLETED'`
+- `pointsEarned === null` significa pendente/apurando
+- Regras de pontuação são retroativas
+- Campos de score, imagem, deadline, estádio e flags podem ser `null`
+- Apenas `ADMIN` atualiza resultados de partidas
+- Apenas dono do bolão edita scoring rules
+
+---
+
+## Próximos Passos
+
+- Smoke test manual em device/web dos fluxos críticos
+- Melhorar feedback visual de estados de palpite no dashboard e pool detail
+- Melhorar perfil/avatar quando houver endpoint ou upload definido
+- Avaliar reorganização em `features/*` se os hooks/screens continuarem crescendo

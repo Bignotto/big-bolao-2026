@@ -10,7 +10,7 @@ All endpoints (except POST /users) require Authorization: Bearer <supabase_token
 - PUT /users/:userId
 - GET /users/:userId/pools
 - GET /users/me/pools/standings
-- GET /users/me/predictions (?poolId=)
+- GET /users/me/predictions (?poolId=) → user's predictions, used by pool detail to avoid per-match N+1 requests
 
 ### Pools
 
@@ -38,7 +38,7 @@ All endpoints (except POST /users) require Authorization: Bearer <supabase_token
 
 - GET /matches/:matchId
 - GET /matches/:matchId/predictions
-- GET /matches/:matchId/predictions/me (returns array, null = no prediction yet)
+- GET /matches/:matchId/predictions/me → user's prediction status across pools for one match (`prediction: null` means no prediction yet)
 - PUT /matches/:matchId (ADMIN only)
 
 ### Tournaments

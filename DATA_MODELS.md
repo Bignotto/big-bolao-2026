@@ -47,7 +47,7 @@ homeTeamId: number;
 awayTeamId: number;
 matchDatetime: string;
 stadium: string | null;
-stage: 'GROUP' | 'ROUND_OF_16' | 'QUARTER_FINAL' | 'SEMI_FINAL' | 'FINAL' | 'THIRD_PLACE' | 'LOSERS_MATCH';
+stage: 'GROUP' | 'ROUND_OF_32' | 'ROUND_OF_16' | 'QUARTER_FINAL' | 'SEMI_FINAL' | 'FINAL' | 'THIRD_PLACE' | 'LOSERS_MATCH';
 group: string | null;
 homeTeamScore: number | null;
 awayTeamScore: number | null;
@@ -118,6 +118,7 @@ poolId: number;
 poolName: string;
 matchId: number;
 prediction: { ...Prediction fields... } | null;
+userRank: number | null;
 }
 
 Leaderboard Entry

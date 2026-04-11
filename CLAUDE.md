@@ -4,10 +4,10 @@ You are assisting with the development of the **Big Bolão** mobile app — a sp
 
 **Use the split files below (token-efficient):**
 
-- data-models.md
-- api-endpoints.md
-- scoring-logic.md
-- business-rules.md
+- DATA_MODELS.md
+- API_ENDPOINTS.md
+- SCORING_LOGIC.md
+- BUSINESS_RULES.md
 
 ## Project Overview
 
@@ -40,6 +40,8 @@ Users create/join tournament pools, submit predictions (score, winner, ET, penal
 7. Invite flow: GET /pool-invites/:code → preview → POST to join
 8. Always show pool.scoringRules when submitting/reviewing predictions
 9. Matches list screen is prediction-free; load predictions only on detail screen via GET /matches/:matchId/predictions/me
+10. Pool detail prediction status uses GET /users/me/predictions?poolId=...; do not reintroduce per-match N+1 prediction requests
+11. Profile updates use backend `fullName`, not a UI-only `name` field
 
 ## Backend Stack
 

@@ -11,7 +11,7 @@ Base Points (priority order):
 Stage Multipliers:
 
 - GROUP → 1×
-- Knockout (ROUND_OF_16 … THIRD_PLACE) → knockoutMultiplier (default 1.5)
+- Knockout (ROUND_OF_32 … THIRD_PLACE) → knockoutMultiplier (default 1.5)
 - FINAL → finalMultiplier (default 2.0)
 
 Example: predict 2-1, actual 3-1 in SEMI_FINAL → 3 pts × 1.5 = 4.5 pts
