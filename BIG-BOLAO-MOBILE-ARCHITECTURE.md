@@ -351,10 +351,18 @@ const pending = data?.predictions.filter((p) => p.prediction === null) ?? [];
   - props: `match: Match`, `onPress: () => void`, `centerSubtext: string`
   - center column: time (HH:mm) + centerSubtext + separator line
   - flag image via `team.flagUrl`; when null renders a colored placeholder with countryCode initials
+- TeamFlag — `components/matches/TeamFlag`
+  - props: `flagUrl: string | null`, `teamName: string`, `size?: 'sm' | 'md' | 'lg'`
+  - sizes: sm 32×24, md 56×42, lg 72×54; falls back to gray placeholder on null or error
+- MatchHeader — `components/matches/MatchHeader`
+  - props: `match: Match`
+  - dark hero card (primary_dark bg): metadata line (stage · group · stadium), teams+flags row, status badge (datetime / live pill / Encerrado / Adiado)
 - LeaderboardRow
 - ScoreInput
 - PredictionCard
-- MatchPredictionStatusCard ← novo: exibe palpite por bolão ou CTA de palpite pendente
+- MatchPredictionStatusCard — `components/AppComponents/MatchPredictionStatusCard`
+  - props: `poolName`, `poolId`, `matchId`, `matchStatus`, `prediction`, `userRank`, `homeTeamCode`, `awayTeamCode`, `onPressBet`
+  - resolves one of 5 variants: no-prediction-open, prediction-open, prediction-live, no-prediction-locked, prediction-completed
 
 ---
 
