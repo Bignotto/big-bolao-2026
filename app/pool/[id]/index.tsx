@@ -11,6 +11,7 @@ import styled, { useTheme, type DefaultTheme } from 'styled-components/native';
 
 import { usePool } from '@/hooks/usePool';
 import { usePoolStandings } from '@/hooks/usePoolStandings';
+import { usePoolMembers } from '@/hooks/usePoolMembers';
 import { useMatches } from '@/hooks/useMatches';
 import { usePredictions } from '@/hooks/usePredictions';
 import { useSession } from '@/context/SessionContext';
@@ -27,7 +28,7 @@ import type { LeaderboardEntry } from '@/components/AppComponents/LeaderboardRow
 import SegmentedControl, {
   Segment,
 } from '@/components/AppComponents/SegmentedControl';
-import { Spaces } from '@/constants/tokens';
+import { IconSizes, Spaces } from '@/constants/tokens';
 
 // ─── Tab & filter types ───────────────────────────────────────────────────────
 
@@ -35,8 +36,8 @@ type MainTab = 'predictions' | 'standings' | 'matches';
 type StatusFilter = 'all' | 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED';
 
 const MAIN_TABS: Segment<MainTab>[] = [
-  { label: 'Palpites', value: 'predictions' },
   { label: 'Ranking', value: 'standings' },
+  { label: 'Palpites', value: 'predictions' },
   { label: 'Partidas', value: 'matches' },
 ];
 
@@ -85,6 +86,73 @@ const ListHeaderText = styled.View`
   align-items: flex-end;
   padding-horizontal: ${Spaces.md}px;
   padding-vertical: ${Spaces.xsm}px;
+`;
+
+const RankingSummary = styled.View`
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  margin-horizontal: ${Spaces.md}px;
+  margin-top: ${Spaces.sm}px;
+  margin-bottom: ${Spaces.xsm}px;
+  padding-horizontal: ${Spaces.md}px;
+  padding-vertical: ${Spaces.md}px;
+  border-radius: 10px;
+  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.positive};
+`;
+
+const SummaryItem = styled.View`
+  flex: 1;
+  align-items: center;
+`;
+
+const SummaryValueRow = styled.View`
+  min-height: 28px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+`;
+
+const StandingsFooter = styled.View`
+  padding-horizontal: ${Spaces.md}px;
+  padding-top: ${Spaces.md}px;
+  padding-bottom: ${Spaces.lg}px;
+`;
+
+const StandingsTableHeader = styled.View`
+  flex-direction: row;
+  align-items: center;
+  min-height: 34px;
+  padding-horizontal: ${Spaces.md}px;
+  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.shape_light};
+  border-bottom-width: 0.5px;
+  border-bottom-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.border};
+`;
+
+const RankHeaderCell = styled.View`
+  width: 36px;
+`;
+
+const NameHeaderCell = styled.View`
+  flex: 1;
+  margin-left: ${IconSizes.lg + Spaces.sm}px;
+  margin-right: ${Spaces.sm}px;
+`;
+
+const PointsHeaderCell = styled.View`
+  width: 48px;
+  align-items: flex-end;
+  margin-left: ${Spaces.sm}px;
+`;
+
+const StatsHeaderCell = styled.View`
+  justify-content: flex-end;
+  width: 48px;
+  margin-left: ${Spaces.md}px;
+`;
+
+const StatHeaderItem = styled.View`
+  align-items: flex-end;
 `;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -174,7 +242,7 @@ export default function PoolDetailsScreen() {
   const theme = useTheme();
   const { apiUser } = useSession();
 
-  const [activeTab, setActiveTab] = useState<MainTab>('predictions');
+  const [activeTab, setActiveTab] = useState<MainTab>('standings');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
 
   // ── Data ────────────────────────────────────────────────────────────────────
@@ -205,27 +273,95 @@ export default function PoolDetailsScreen() {
     refresh: standingsRefresh,
   } = usePoolStandings(poolId);
 
+  const {
+    members,
+    loading: membersLoading,
+    error: membersError,
+    refresh: membersRefresh,
+  } = usePoolMembers(poolId);
+
   const lastUpdatedMinutes = minutesSince(standings[0]?.lastUpdated);
+
+  const memberById = useMemo(() => {
+    const map = new Map<string, (typeof members)[number]>();
+    for (const member of members) {
+      map.set(member.id, member);
+    }
+    return map;
+  }, [members]);
 
   // Adapt API shape (fullName) to LeaderboardRow shape (name)
   const leaderboardEntries: LeaderboardEntry[] = useMemo(
     () =>
-      standings.map((s) => ({
-        poolId: s.poolId,
-        userId: s.userId,
-        totalPoints: s.totalPoints,
-        exactScoresCount: s.exactScoresCount,
-        correctWinnersCount: s.correctWinnersCount,
-        rank: s.rank,
-        lastUpdated: s.lastUpdated,
+      standings.map((s, index) => {
+        const standing = s as typeof s & {
+          exactScoreCount?: number;
+          user?: Record<string, unknown>;
+        };
+        const user = standing.user;
+        const userId =
+          standing.userId ??
+          (typeof user?.id === 'string' ? user.id : null) ??
+          String(index);
+        const member = memberById.get(userId);
+
+        return {
+          poolId: standing.poolId ?? poolId ?? 0,
+          userId,
+          totalPoints: standing.totalPoints ?? 0,
+          exactScoresCount: standing.exactScoreCount ?? standing.exactScoresCount ?? 0,
+          correctWinnersCount: standing.correctWinnersCount ?? 0,
+          rank: standing.rank ?? index + 1,
+          lastUpdated: standing.lastUpdated ?? null,
+          user: {
+            id: typeof user?.id === 'string' ? user.id : userId,
+            name:
+              (typeof user?.fullName === 'string' ? user.fullName : null) ??
+              (typeof user?.name === 'string' ? user.name : null) ??
+              member?.fullName ??
+              member?.name ??
+              'Participante',
+            profileImageUrl:
+              (typeof user?.profileImageUrl === 'string' ? user.profileImageUrl : null) ??
+              (typeof user?.avatarUrl === 'string' ? user.avatarUrl : null) ??
+              (typeof user?.photoUrl === 'string' ? user.photoUrl : null) ??
+              (typeof user?.picture === 'string' ? user.picture : null) ??
+              member?.profileImageUrl ??
+              null,
+          },
+        };
+      }),
+    [memberById, poolId, standings],
+  );
+
+  const memberEntries: LeaderboardEntry[] = useMemo(
+    () =>
+      members.map((member) => ({
+        poolId: poolId ?? 0,
+        userId: member.id,
+        totalPoints: 0,
+        exactScoresCount: 0,
+        correctWinnersCount: 0,
+        rank: null,
+        lastUpdated: null,
         user: {
-          id: s.user.id,
-          name: (s.user as any).fullName ?? (s.user as any).name ?? '',
-          profileImageUrl: s.user.profileImageUrl,
+          id: member.id,
+          name: member.fullName ?? member.name ?? 'Participante',
+          profileImageUrl: member.profileImageUrl,
         },
       })),
-    [standings],
+    [members, poolId],
   );
+
+  const showMemberFallback = !standingsLoading && leaderboardEntries.length === 0;
+  const rankingEntries = showMemberFallback ? memberEntries : leaderboardEntries;
+  const currentUserEntry = rankingEntries.find((entry) => entry.userId === apiUser?.id);
+  const currentUserRank = currentUserEntry?.rank ?? null;
+  const rankingSummary = [
+    { label: 'Ranking', value: currentUserRank != null ? `# ${currentUserRank}` : '-' },
+    { label: 'Pontos', value: String(currentUserEntry?.totalPoints ?? 0) },
+    { label: 'Exatos', value: String(currentUserEntry?.exactScoresCount ?? 0) },
+  ];
 
   // ── Loading / Error ──────────────────────────────────────────────────────────
 
@@ -269,6 +405,13 @@ export default function PoolDetailsScreen() {
 
   function handleMatchesPress(match: Match) {
     router.push(`/match/${match.id}`);
+  }
+
+  async function handleStandingsRefresh() {
+    await standingsRefresh();
+    if (showMemberFallback) {
+      await membersRefresh();
+    }
   }
 
   // ── Render ───────────────────────────────────────────────────────────────────
@@ -344,37 +487,92 @@ export default function PoolDetailsScreen() {
       {/* Standings tab */}
       {activeTab === 'standings' && (
         <FlatList<LeaderboardEntry>
-          data={leaderboardEntries}
+          data={rankingEntries}
           keyExtractor={(item) => item.userId}
           refreshControl={
             <RefreshControl
-              refreshing={standingsLoading}
-              onRefresh={standingsRefresh}
+              refreshing={standingsLoading || (showMemberFallback && membersLoading)}
+              onRefresh={handleStandingsRefresh}
               colors={[theme.colors.primary]}
               tintColor={theme.colors.primary}
             />
           }
           ListHeaderComponent={
-            lastUpdatedMinutes != null ? (
-              <ListHeaderText>
-                <AppText size="xsm" color={theme.colors.text_disabled} align="right">
-                  Atualizado há {lastUpdatedMinutes} min
-                </AppText>
-              </ListHeaderText>
-            ) : null
+            <>
+              <RankingSummary>
+                {rankingSummary.map((item) => (
+                  <SummaryItem key={item.label}>
+                    <SummaryValueRow>
+                      <AppText bold size="lg" color={theme.colors.white} align="center">
+                        {item.value}
+                      </AppText>
+                    </SummaryValueRow>
+                    <AppText bold size="xsm" color={theme.colors.white} align="center">
+                      {item.label}
+                    </AppText>
+                  </SummaryItem>
+                ))}
+              </RankingSummary>
+              {lastUpdatedMinutes != null ? (
+                <ListHeaderText>
+                  <AppText size="xsm" color={theme.colors.text_disabled} align="right">
+                    Atualizado há {lastUpdatedMinutes} min
+                  </AppText>
+                </ListHeaderText>
+              ) : showMemberFallback ? (
+                <ListHeaderText>
+                  <AppText size="xsm" color={theme.colors.text_disabled} align="right">
+                    Participantes aguardando o primeiro ranking
+                  </AppText>
+                </ListHeaderText>
+              ) : null}
+              {rankingEntries.length > 0 && (
+                <StandingsTableHeader>
+                  <RankHeaderCell />
+                  <NameHeaderCell>
+                    <AppText bold size="xsm" color={theme.colors.text_gray}>
+                      Participante
+                    </AppText>
+                  </NameHeaderCell>
+                  <PointsHeaderCell>
+                    <AppText bold size="xsm" color={theme.colors.text_gray} align="right">
+                      Pts
+                    </AppText>
+                  </PointsHeaderCell>
+                  <StatsHeaderCell>
+                    <StatHeaderItem>
+                      <AppText bold size="xsm" color={theme.colors.text_gray} align="right">
+                        Exatos
+                      </AppText>
+                    </StatHeaderItem>
+                  </StatsHeaderCell>
+                </StandingsTableHeader>
+              )}
+            </>
           }
           ListEmptyComponent={
             <CenteredFill>
               <AppText size="sm" color={theme.colors.text_gray} align="center">
-                Nenhum participante ainda
+                {membersLoading
+                  ? 'Carregando participantes...'
+                  : membersError ?? 'Nenhum participante ainda'}
               </AppText>
             </CenteredFill>
+          }
+          ListFooterComponent={
+            <StandingsFooter>
+              <AppButton
+                title="Meus Palpites"
+                variant="positive"
+                onPress={() => setActiveTab('predictions')}
+              />
+            </StandingsFooter>
           }
           contentContainerStyle={{ flexGrow: 1 }}
           renderItem={({ item: entry, index }) => (
             <LeaderboardRow
               entry={entry}
-              rank={entry.rank ?? index + 1}
+              rank={entry.rank ?? (showMemberFallback ? null : index + 1)}
               isCurrentUser={entry.userId === apiUser?.id}
             />
           )}

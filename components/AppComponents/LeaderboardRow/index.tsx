@@ -25,13 +25,11 @@ export type LeaderboardEntry = {
 interface LeaderboardRowProps {
   entry: LeaderboardEntry;
   isCurrentUser: boolean;
-  rank: number;
+  rank: number | null;
 }
 
-function rowBackground(rank: number, isCurrentUser: boolean, theme: DefaultTheme): string {
+function rowBackground(rank: number | null, isCurrentUser: boolean, theme: DefaultTheme): string {
   if (isCurrentUser) return rgba(theme.colors.primary, 0.06);
-  if (rank === 1) return rgba(theme.colors.secondary, 0.08);
-  if (rank === 2 || rank === 3) return rgba(theme.colors.shape, 0.5);
   return theme.colors.white;
 }
 
@@ -59,12 +57,14 @@ const NameCell = styled.View`
 `;
 
 const PointsCell = styled.View`
+  width: 48px;
   align-items: flex-end;
   margin-left: ${Spaces.sm}px;
 `;
 
 const StatsCell = styled.View`
-  align-items: flex-end;
+  justify-content: flex-end;
+  width: 48px;
   margin-left: ${Spaces.md}px;
 `;
 
@@ -72,7 +72,15 @@ const StatItem = styled.View`
   align-items: flex-end;
 `;
 
-function RankDisplay({ rank, theme }: { rank: number; theme: DefaultTheme }) {
+function RankDisplay({ rank, theme }: { rank: number | null; theme: DefaultTheme }) {
+  if (rank == null) {
+    return (
+      <AppText size="sm" color={theme.colors.text_disabled} align="center">
+        -
+      </AppText>
+    );
+  }
+
   if (rank === 1) {
     return (
       <Ionicons
@@ -112,6 +120,7 @@ export default function LeaderboardRow({
 
       <AppAvatar
         imagePath={entry.user.profileImageUrl ?? undefined}
+        name={entry.user.name}
         size={IconSizes.lg}
       />
 
@@ -136,26 +145,12 @@ export default function LeaderboardRow({
         <AppText bold size="md" color={theme.colors.primary}>
           {entry.totalPoints}
         </AppText>
-        <AppText size="xsm" color={theme.colors.text_gray}>
-          pts
-        </AppText>
       </PointsCell>
 
       <StatsCell>
         <StatItem>
           <AppText size="xsm" color={theme.colors.positive}>
             {entry.exactScoresCount}
-          </AppText>
-          <AppText size="xsm" color={theme.colors.text_disabled}>
-            exatos
-          </AppText>
-        </StatItem>
-        <StatItem>
-          <AppText size="xsm" color={theme.colors.text_gray}>
-            {entry.correctWinnersCount}
-          </AppText>
-          <AppText size="xsm" color={theme.colors.text_disabled}>
-            vencedor
           </AppText>
         </StatItem>
       </StatsCell>
