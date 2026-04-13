@@ -3,6 +3,8 @@ export const poolKeys = {
   myPools: ['pools', 'mine'] as const,
   detail: (id: number) => ['pools', id] as const,
   members: (id: number) => ['pools', id, 'members'] as const,
+  matchPredictions: (poolId: number, matchId: number) =>
+    ['pools', poolId, 'matches', matchId, 'predictions'] as const,
   standings: (id: number) => ['pools', id, 'standings'] as const,
   search: (q: string) => ['pools', 'search', q] as const,
 };
