@@ -4,6 +4,7 @@ import {
   FlatList,
   RefreshControl,
   SafeAreaView,
+  SectionList,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -15,19 +16,33 @@ import { usePoolMembers } from '@/hooks/usePoolMembers';
 import { useMatches } from '@/hooks/useMatches';
 import { usePredictions } from '@/hooks/usePredictions';
 import { useSession } from '@/context/SessionContext';
-import { isMatchLocked } from '@/domain/entities/Match';
 import type { Match } from '@/domain/entities/Match';
 import type { Prediction } from '@/domain/entities/Prediction';
+import { MatchStage, STAGE_LABELS } from '@/domain/enums/MatchStage';
+import {
+  filterByDate,
+  filterByGroup,
+  filterByStage,
+  groupByRound,
+} from '@/domain/helpers/matchFilters';
 
 import AppText from '@/components/AppComponents/AppText';
 import AppSpacer from '@/components/AppComponents/AppSpacer';
 import AppButton from '@/components/AppComponents/AppButton';
 import MatchCard from '@/components/AppComponents/MatchCard';
+import PoolPredictionMatchCard from '@/components/AppComponents/PoolPredictionMatchCard';
 import LeaderboardRow from '@/components/AppComponents/LeaderboardRow';
 import type { LeaderboardEntry } from '@/components/AppComponents/LeaderboardRow';
 import SegmentedControl, {
   Segment,
 } from '@/components/AppComponents/SegmentedControl';
+import MatchFilterControls, {
+  getAvailableDates,
+  getDefaultMatchDate,
+  isGroupChip,
+  type MatchFilterChipValue,
+  type MatchFilterMode,
+} from '@/components/matches/MatchFilterControls';
 import { IconSizes, Spaces } from '@/constants/tokens';
 
 // ─── Tab & filter types ───────────────────────────────────────────────────────
@@ -155,6 +170,28 @@ const StatHeaderItem = styled.View`
   align-items: flex-end;
 `;
 
+const SectionHeaderRow = styled.View`
+  flex-direction: row;
+  align-items: center;
+  gap: ${Spaces.sm}px;
+  padding-horizontal: ${Spaces.md}px;
+  padding-top: ${Spaces.md}px;
+  padding-bottom: ${Spaces.sm}px;
+  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.background};
+`;
+
+const SectionLine = styled.View`
+  flex: 1;
+  height: 1px;
+  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.border};
+`;
+
+const MATCH_LIST_CONTENT = {
+  paddingHorizontal: Spaces.md,
+  paddingBottom: Spaces.lg,
+  flexGrow: 1,
+} as const;
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function minutesSince(iso: string | null | undefined): number | null {
@@ -169,6 +206,18 @@ function formatDeadline(iso: string): string {
     month: '2-digit',
     year: 'numeric',
   });
+}
+
+function formatDDMM(datetime: string): string {
+  return new Date(datetime).toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+  });
+}
+
+function getDateModeSubtext(match: Match): string {
+  if (match.stage === MatchStage.GROUP) return `Grupo ${match.group ?? ''}`;
+  return STAGE_LABELS[match.stage as MatchStage] ?? match.stage;
 }
 
 // ─── Match list panel (shared between "predictions" and "matches" tabs) ───────
@@ -201,11 +250,7 @@ function MatchPanel({
     <FlatList<Match>
       data={filtered}
       keyExtractor={(item) => String(item.id)}
-      contentContainerStyle={{
-        paddingHorizontal: Spaces.md,
-        paddingBottom: Spaces.lg,
-        flexGrow: 1,
-      }}
+      contentContainerStyle={MATCH_LIST_CONTENT}
       ItemSeparatorComponent={() => <AppSpacer verticalSpace="xsm" />}
       ListEmptyComponent={
         <CenteredFill>
@@ -233,6 +278,134 @@ function MatchPanel({
   );
 }
 
+type PredictionMatchPanelProps = {
+  matches: Match[];
+  isFetching: boolean;
+  refetch: () => void;
+  predictionMap: Map<number, Prediction>;
+  onMatchPress: (match: Match) => void;
+  mode: MatchFilterMode;
+  selectedChip: MatchFilterChipValue;
+  selectedDate: string | null;
+  onModeChange: (mode: MatchFilterMode) => void;
+  onChipChange: (chip: MatchFilterChipValue) => void;
+  onDateChange: (date: string) => void;
+};
+
+function PredictionMatchPanel({
+  matches,
+  isFetching,
+  refetch,
+  predictionMap,
+  onMatchPress,
+  mode,
+  selectedChip,
+  selectedDate,
+  onModeChange,
+  onChipChange,
+  onDateChange,
+}: PredictionMatchPanelProps) {
+  const theme = useTheme();
+  const availableDates = useMemo(() => getAvailableDates(matches), [matches]);
+  const defaultDate = useMemo(() => getDefaultMatchDate(matches), [matches]);
+  const effectiveDate = selectedDate ?? defaultDate;
+
+  const sections = useMemo(() => {
+    if (isGroupChip(selectedChip)) {
+      return groupByRound(filterByGroup(matches, selectedChip)).map(
+        ({ round, matches: roundMatches }) => ({
+          title: `Grupo ${selectedChip} · Rodada ${round}`,
+          data: roundMatches,
+        }),
+      );
+    }
+
+    const stage = selectedChip as MatchStage;
+    return [{ title: STAGE_LABELS[stage], data: filterByStage(matches, stage) }];
+  }, [matches, selectedChip]);
+
+  const dateMatches = useMemo(
+    () => filterByDate(matches, effectiveDate),
+    [effectiveDate, matches],
+  );
+
+  const refreshControl = (
+    <RefreshControl
+      refreshing={isFetching}
+      onRefresh={refetch}
+      colors={[theme.colors.primary]}
+      tintColor={theme.colors.primary}
+    />
+  );
+
+  const emptyComponent = (
+    <CenteredFill>
+      <AppText size="sm" color={theme.colors.text_gray} align="center">
+        Nenhuma partida encontrada
+      </AppText>
+    </CenteredFill>
+  );
+
+  return (
+    <>
+      <MatchFilterControls
+        mode={mode}
+        selectedChip={selectedChip}
+        selectedDate={effectiveDate}
+        availableDates={availableDates}
+        onModeChange={onModeChange}
+        onChipChange={onChipChange}
+        onDateChange={onDateChange}
+      />
+
+      {mode === 'group-stage' ? (
+        <SectionList
+          sections={sections}
+          keyExtractor={(item) => String(item.id)}
+          contentContainerStyle={MATCH_LIST_CONTENT}
+          stickySectionHeadersEnabled
+          refreshControl={refreshControl}
+          ListEmptyComponent={emptyComponent}
+          ItemSeparatorComponent={() => <AppSpacer verticalSpace="xsm" />}
+          renderSectionHeader={({ section }) => (
+            <SectionHeaderRow>
+              <AppText size="xsm" bold color={theme.colors.text_gray}>
+                {section.title.toUpperCase()}
+              </AppText>
+              <SectionLine />
+            </SectionHeaderRow>
+          )}
+          renderItem={({ item }) => (
+            <PoolPredictionMatchCard
+              match={item}
+              prediction={predictionMap.get(item.id) ?? null}
+              centerSubtext={formatDDMM(item.matchDatetime)}
+              onPress={() => onMatchPress(item)}
+            />
+          )}
+        />
+      ) : (
+        <FlatList<Match>
+          data={dateMatches}
+          keyExtractor={(item) => String(item.id)}
+          contentContainerStyle={MATCH_LIST_CONTENT}
+          refreshControl={refreshControl}
+          ListEmptyComponent={emptyComponent}
+          ItemSeparatorComponent={() => <AppSpacer verticalSpace="xsm" />}
+          renderItem={({ item }) => (
+            <PoolPredictionMatchCard
+              match={item}
+              prediction={predictionMap.get(item.id) ?? null}
+              centerSubtext={getDateModeSubtext(item)}
+              onPress={() => onMatchPress(item)}
+            />
+          )}
+        />
+      )}
+    </>
+  );
+}
+
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function PoolDetailsScreen() {
@@ -244,6 +417,11 @@ export default function PoolDetailsScreen() {
 
   const [activeTab, setActiveTab] = useState<MainTab>('standings');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [predictionFilterMode, setPredictionFilterMode] =
+    useState<MatchFilterMode>('group-stage');
+  const [predictionSelectedChip, setPredictionSelectedChip] =
+    useState<MatchFilterChipValue>('A');
+  const [predictionSelectedDate, setPredictionSelectedDate] = useState<string | null>(null);
 
   // ── Data ────────────────────────────────────────────────────────────────────
 
@@ -396,10 +574,10 @@ export default function PoolDetailsScreen() {
   // ── Navigation handlers ──────────────────────────────────────────────────────
 
   function handlePredictionsPress(match: Match) {
-    if (!isMatchLocked(match)) {
+    if (match.matchStatus === 'SCHEDULED') {
       router.push(`/pool/${id}/predict?matchId=${match.id}`);
     } else {
-      router.push(`/match/${match.id}`);
+      router.push(`/pool/${id}/match/${match.id}`);
     }
   }
 
@@ -467,21 +645,19 @@ export default function PoolDetailsScreen() {
 
       {/* Predictions tab */}
       {activeTab === 'predictions' && (
-        <>
-          <SegmentedControl
-            segments={STATUS_SEGMENTS}
-            selected={statusFilter}
-            onChange={setStatusFilter}
-          />
-          <MatchPanel
-            matches={matches ?? []}
-            isFetching={matchesFetching}
-            refetch={matchesRefetch}
-            predictionMap={predictionMap}
-            onMatchPress={handlePredictionsPress}
-            statusFilter={statusFilter}
-          />
-        </>
+        <PredictionMatchPanel
+          matches={matches ?? []}
+          isFetching={matchesFetching}
+          refetch={matchesRefetch}
+          predictionMap={predictionMap}
+          onMatchPress={handlePredictionsPress}
+          mode={predictionFilterMode}
+          selectedChip={predictionSelectedChip}
+          selectedDate={predictionSelectedDate}
+          onModeChange={setPredictionFilterMode}
+          onChipChange={setPredictionSelectedChip}
+          onDateChange={setPredictionSelectedDate}
+        />
       )}
 
       {/* Standings tab */}

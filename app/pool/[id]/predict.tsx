@@ -110,24 +110,24 @@ export default function PredictScreen() {
 
   // ── Form state ───────────────────────────────────────────────────────────────
 
-  const [homeValue, setHomeValue] = useState(
-    existingPrediction != null
-      ? String(existingPrediction.predictedHomeScore)
-      : '',
-  );
-  const [awayValue, setAwayValue] = useState(
-    existingPrediction != null
-      ? String(existingPrediction.predictedAwayScore)
-      : '',
-  );
+  const [homeValue, setHomeValue] = useState('');
+  const [awayValue, setAwayValue] = useState('');
 
-  // Sync initial values once existing prediction loads
+  // Sync values when the route changes or when the saved prediction loads.
   React.useEffect(() => {
-    if (existingPrediction && homeValue === '' && awayValue === '') {
+    if (existingPrediction) {
       setHomeValue(String(existingPrediction.predictedHomeScore));
       setAwayValue(String(existingPrediction.predictedAwayScore));
+    } else {
+      setHomeValue('');
+      setAwayValue('');
     }
-  }, [existingPrediction]);
+  }, [
+    matchId,
+    existingPrediction?.id,
+    existingPrediction?.predictedHomeScore,
+    existingPrediction?.predictedAwayScore,
+  ]);
 
   const mutation = useUpsertPrediction(poolId!);
 

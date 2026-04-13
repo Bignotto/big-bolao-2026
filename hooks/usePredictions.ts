@@ -16,14 +16,16 @@ export function usePredictions(
       const params = new URLSearchParams({ poolId: String(poolId) });
       const data = await apiFetch<PredictionsResponse>(`/users/me/predictions?${params}`);
       const list = Array.isArray(data) ? data : data.predictions;
-      const allowedMatchIds = new Set(matchIds);
 
       return list.filter(
         (prediction) =>
-          prediction.poolId === poolId &&
-          prediction.userId === userId &&
-          (allowedMatchIds.size === 0 || allowedMatchIds.has(prediction.matchId)),
+          prediction.poolId === poolId && prediction.userId === userId,
       );
+    },
+    select: (predictions) => {
+      const allowedMatchIds = new Set(matchIds);
+      if (allowedMatchIds.size === 0) return predictions;
+      return predictions.filter((prediction) => allowedMatchIds.has(prediction.matchId));
     },
     enabled: poolId != null && userId != null,
     staleTime: 30_000,
