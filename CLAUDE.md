@@ -2,6 +2,12 @@
 
 You are assisting with the development of the **Big Bolão** mobile app — a sports prediction pool (bolão) application. This is the canonical reference for the backend API.
 
+Always consult the knowledge-base/ folder to understand the architecture, technical decisions, components, and screens.
+Use the wikilinks and the Obsidian structure as a reference.
+Before proposing changes, check if documentation already exists in knowledge-base/
+
+The knowledge-base/ foder is an Obsidian Vault.
+
 **Use the split files below (token-efficient):**
 
 - DATA_MODELS.md
