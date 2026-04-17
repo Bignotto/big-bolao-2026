@@ -6,7 +6,8 @@
       "mcp__plugin_context-mode_context-mode__ctx_batch_execute",
       "Bash(npx tsc:*)",
       "mcp__plugin_context-mode_context-mode__ctx_search",
-      "mcp__plugin_context-mode_context-mode__ctx_stats"
+      "mcp__plugin_context-mode_context-mode__ctx_stats",
+      "Bash(ls c:/Users/Thiago/Projects/big-bolao-2026/*.md)"
     ]
   }
 }
