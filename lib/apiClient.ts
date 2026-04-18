@@ -24,7 +24,7 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
   const response = await fetch(`${API_URL}${path}`, {
     ...options,
     headers: {
-      'Content-Type': 'application/json',
+      ...(options.body != null ? { 'Content-Type': 'application/json' } : {}),
       Authorization: authHeader,
       ...options.headers,
     },
@@ -38,6 +38,11 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
       body?.error ??
       `HTTP ${response.status}`;
     throw new ApiError(response.status, detail);
+  }
+
+  const contentType = response.headers.get('content-type');
+  if (response.status === 204 || !contentType?.includes('application/json')) {
+    return undefined as T;
   }
 
   return response.json() as Promise<T>;

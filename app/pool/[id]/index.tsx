@@ -1,9 +1,11 @@
 import React, { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   RefreshControl,
   SafeAreaView,
+  ScrollView,
   SectionList,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -11,10 +13,14 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import styled, { useTheme, type DefaultTheme } from 'styled-components/native';
 
 import { usePool } from '@/hooks/usePool';
+import type { PoolDetail } from '@/hooks/usePool';
 import { usePoolStandings } from '@/hooks/usePoolStandings';
 import { usePoolMembers } from '@/hooks/usePoolMembers';
+import type { PoolMember } from '@/hooks/usePoolMembers';
 import { useMatches } from '@/hooks/useMatches';
 import { usePredictions } from '@/hooks/usePredictions';
+import { useRemovePoolMember } from '@/hooks/useRemovePoolMember';
+import { useLeavePool } from '@/hooks/useLeavePool';
 import { useSession } from '@/context/SessionContext';
 import type { Match } from '@/domain/entities/Match';
 import type { Prediction } from '@/domain/entities/Prediction';
@@ -29,8 +35,8 @@ import {
 import AppText from '@/components/AppComponents/AppText';
 import AppSpacer from '@/components/AppComponents/AppSpacer';
 import AppButton from '@/components/AppComponents/AppButton';
-import MatchCard from '@/components/AppComponents/MatchCard';
 import PoolPredictionMatchCard from '@/components/AppComponents/PoolPredictionMatchCard';
+import AppAvatar from '@/components/AppComponents/AppAvatar';
 import LeaderboardRow from '@/components/AppComponents/LeaderboardRow';
 import type { LeaderboardEntry } from '@/components/AppComponents/LeaderboardRow';
 import SegmentedControl, {
@@ -47,20 +53,12 @@ import { IconSizes, Spaces } from '@/constants/tokens';
 
 // ─── Tab & filter types ───────────────────────────────────────────────────────
 
-type MainTab = 'predictions' | 'standings' | 'matches';
-type StatusFilter = 'all' | 'SCHEDULED' | 'IN_PROGRESS' | 'COMPLETED';
+type MainTab = 'predictions' | 'standings' | 'info';
 
 const MAIN_TABS: Segment<MainTab>[] = [
   { label: 'Ranking', value: 'standings' },
   { label: 'Palpites', value: 'predictions' },
-  { label: 'Partidas', value: 'matches' },
-];
-
-const STATUS_SEGMENTS: Segment<StatusFilter>[] = [
-  { label: 'Todos', value: 'all' },
-  { label: 'Agendados', value: 'SCHEDULED' },
-  { label: 'Ao vivo', value: 'IN_PROGRESS' },
-  { label: 'Encerrados', value: 'COMPLETED' },
+  { label: 'Grupo', value: 'info' },
 ];
 
 // ─── Styled ───────────────────────────────────────────────────────────────────
@@ -186,6 +184,62 @@ const SectionLine = styled.View`
   background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.border};
 `;
 
+const InfoScroll = styled(ScrollView)`
+  flex: 1;
+`;
+
+const InfoSection = styled.View`
+  margin-top: ${Spaces.md}px;
+`;
+
+const InfoSectionHeader = styled.View`
+  flex-direction: row;
+  align-items: center;
+  padding-horizontal: ${Spaces.md}px;
+  padding-vertical: ${Spaces.sm}px;
+  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.shape_light};
+  border-bottom-width: 0.5px;
+  border-bottom-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.border};
+`;
+
+const ScoringRow = styled.View`
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding-horizontal: ${Spaces.md}px;
+  padding-vertical: ${Spaces.sm}px;
+  border-bottom-width: 0.5px;
+  border-bottom-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.border};
+  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.white};
+`;
+
+const MemberRow = styled.View`
+  flex-direction: row;
+  align-items: center;
+  height: 60px;
+  padding-horizontal: ${Spaces.md}px;
+  border-bottom-width: 0.5px;
+  border-bottom-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.border};
+  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.white};
+`;
+
+const MemberNameCell = styled.View`
+  flex: 1;
+  flex-direction: row;
+  align-items: center;
+  margin-horizontal: ${Spaces.sm}px;
+`;
+
+const RemoveButton = styled.Pressable`
+  padding: ${Spaces.xsm}px;
+`;
+
+const InfoFooter = styled.View`
+  padding-horizontal: ${Spaces.md}px;
+  padding-top: ${Spaces.md}px;
+  padding-bottom: ${Spaces.lg}px;
+`;
+
 const MATCH_LIST_CONTENT = {
   paddingHorizontal: Spaces.md,
   paddingBottom: Spaces.lg,
@@ -218,64 +272,6 @@ function formatDDMM(datetime: string): string {
 function getDateModeSubtext(match: Match): string {
   if (match.stage === MatchStage.GROUP) return `Grupo ${match.group ?? ''}`;
   return STAGE_LABELS[match.stage as MatchStage] ?? match.stage;
-}
-
-// ─── Match list panel (shared between "predictions" and "matches" tabs) ───────
-
-type MatchPanelProps = {
-  matches: Match[];
-  isFetching: boolean;
-  refetch: () => void;
-  predictionMap: Map<number, Prediction>;
-  onMatchPress: (match: Match) => void;
-  statusFilter: StatusFilter;
-};
-
-function MatchPanel({
-  matches,
-  isFetching,
-  refetch,
-  predictionMap,
-  onMatchPress,
-  statusFilter,
-}: MatchPanelProps) {
-  const theme = useTheme();
-
-  const filtered = useMemo(() => {
-    if (statusFilter === 'all') return matches;
-    return matches.filter((m) => m.matchStatus === statusFilter);
-  }, [matches, statusFilter]);
-
-  return (
-    <FlatList<Match>
-      data={filtered}
-      keyExtractor={(item) => String(item.id)}
-      contentContainerStyle={MATCH_LIST_CONTENT}
-      ItemSeparatorComponent={() => <AppSpacer verticalSpace="xsm" />}
-      ListEmptyComponent={
-        <CenteredFill>
-          <AppText size="sm" color={theme.colors.text_gray} align="center">
-            Nenhuma partida encontrada
-          </AppText>
-        </CenteredFill>
-      }
-      refreshControl={
-        <RefreshControl
-          refreshing={isFetching}
-          onRefresh={refetch}
-          colors={[theme.colors.primary]}
-          tintColor={theme.colors.primary}
-        />
-      }
-      renderItem={({ item: match }) => (
-        <MatchCard
-          match={match}
-          prediction={predictionMap.get(match.id) ?? null}
-          onPress={() => onMatchPress(match)}
-        />
-      )}
-    />
-  );
 }
 
 type PredictionMatchPanelProps = {
@@ -406,6 +402,168 @@ function PredictionMatchPanel({
   );
 }
 
+// ─── Pool Info panel ─────────────────────────────────────────────────────────
+
+type PoolInfoPanelProps = {
+  pool: PoolDetail;
+  members: PoolMember[];
+  currentUserId: string | undefined;
+  onMemberRemoved: () => void;
+  onLeavePool: () => void;
+};
+
+function PoolInfoPanel({
+  pool,
+  members,
+  currentUserId,
+  onMemberRemoved,
+  onLeavePool,
+}: PoolInfoPanelProps) {
+  const theme = useTheme();
+  const removeMutation = useRemovePoolMember(pool.id);
+  const leaveMutation = useLeavePool(pool.id);
+
+  const rules = pool.scoringRules;
+  const scoringRows = [
+    { label: 'Placar exato', value: `${rules.exactScorePoints} pts` },
+    { label: 'Vencedor + saldo de gols', value: `${rules.correctWinnerGoalDiffPoints} pts` },
+    { label: 'Vencedor correto', value: `${rules.correctWinnerPoints} pts` },
+    { label: 'Empate correto', value: `${rules.correctDrawPoints} pts` },
+    { label: 'Multiplicador eliminatórias', value: `${rules.knockoutMultiplier}×` },
+    { label: 'Multiplicador final', value: `${rules.finalMultiplier}×` },
+  ];
+
+  function handleRemove(member: PoolMember) {
+    const name = member.fullName ?? member.name ?? 'Participante';
+    Alert.alert(
+      'Remover participante',
+      `Deseja remover ${name} do grupo?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Remover',
+          style: 'destructive',
+          onPress: () =>
+            removeMutation.mutate(member.id, { onSuccess: onMemberRemoved }),
+        },
+      ],
+    );
+  }
+
+  function handleLeave() {
+    Alert.alert(
+      'Sair do grupo',
+      'Tem certeza que deseja sair deste grupo? Seu histórico de palpites será mantido.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Sair',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await leaveMutation.mutateAsync();
+              onLeavePool();
+            } catch (e) {
+              Alert.alert('Erro', (e as Error).message ?? 'Não foi possível sair do grupo.');
+            }
+          },
+        },
+      ],
+    );
+  }
+
+  return (
+    <InfoScroll contentContainerStyle={{ paddingBottom: Spaces.lg }}>
+      {/* Scoring rules */}
+      <InfoSection>
+        <InfoSectionHeader>
+          <AppText bold size="xsm" color={theme.colors.text_gray}>
+            REGRAS DE PONTUAÇÃO
+          </AppText>
+        </InfoSectionHeader>
+        {scoringRows.map((row) => (
+          <ScoringRow key={row.label}>
+            <AppText size="sm" color={theme.colors.text}>
+              {row.label}
+            </AppText>
+            <AppText bold size="sm" color={theme.colors.primary}>
+              {row.value}
+            </AppText>
+          </ScoringRow>
+        ))}
+      </InfoSection>
+
+      {/* Participants */}
+      <InfoSection>
+        <InfoSectionHeader>
+          <AppText bold size="xsm" color={theme.colors.text_gray}>
+            PARTICIPANTES ({members.length})
+          </AppText>
+        </InfoSectionHeader>
+        {members.map((member) => {
+          const isMe = member.id === currentUserId;
+          const isRemoving =
+            removeMutation.isPending && removeMutation.variables === member.id;
+          return (
+            <MemberRow key={member.id}>
+              <AppAvatar
+                imagePath={member.profileImageUrl ?? undefined}
+                name={member.fullName ?? member.name ?? 'P'}
+                size={IconSizes.lg}
+              />
+              <MemberNameCell>
+                <AppText
+                  bold={isMe}
+                  size="sm"
+                  numberOfLines={1}
+                  ellipsizeMode="tail"
+                  style={{ flex: 1 }}
+                >
+                  {member.fullName ?? member.name ?? 'Participante'}
+                </AppText>
+                {isMe && (
+                  <AppText size="xsm" color={theme.colors.text_gray}>
+                    {' '}(você)
+                  </AppText>
+                )}
+              </MemberNameCell>
+              {pool.isCreator && !isMe && (
+                <RemoveButton
+                  onPress={() => handleRemove(member)}
+                  disabled={isRemoving}
+                  accessibilityLabel={`Remover ${member.fullName ?? member.name}`}
+                >
+                  {isRemoving ? (
+                    <ActivityIndicator size="small" color={theme.colors.negative} />
+                  ) : (
+                    <Ionicons
+                      name="trash-outline"
+                      size={IconSizes.sm}
+                      color={theme.colors.negative}
+                    />
+                  )}
+                </RemoveButton>
+              )}
+            </MemberRow>
+          );
+        })}
+      </InfoSection>
+
+      {/* Leave pool footer — only for non-admins */}
+      {!pool.isCreator && (
+        <InfoFooter>
+          <AppButton
+            title="Sair do Grupo"
+            variant="negative"
+            isLoading={leaveMutation.isPending}
+            onPress={handleLeave}
+          />
+        </InfoFooter>
+      )}
+    </InfoScroll>
+  );
+}
+
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function PoolDetailsScreen() {
@@ -416,7 +574,6 @@ export default function PoolDetailsScreen() {
   const { apiUser } = useSession();
 
   const [activeTab, setActiveTab] = useState<MainTab>('standings');
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [predictionFilterMode, setPredictionFilterMode] =
     useState<MatchFilterMode>('group-stage');
   const [predictionSelectedChip, setPredictionSelectedChip] =
@@ -581,10 +738,6 @@ export default function PoolDetailsScreen() {
     }
   }
 
-  function handleMatchesPress(match: Match) {
-    router.push(`/match/${match.id}`);
-  }
-
   async function handleStandingsRefresh() {
     await standingsRefresh();
     if (showMemberFallback) {
@@ -637,10 +790,7 @@ export default function PoolDetailsScreen() {
       <SegmentedControl
         segments={MAIN_TABS}
         selected={activeTab}
-        onChange={(tab) => {
-          setActiveTab(tab);
-          setStatusFilter('all');
-        }}
+        onChange={setActiveTab}
       />
 
       {/* Predictions tab */}
@@ -755,23 +905,15 @@ export default function PoolDetailsScreen() {
         />
       )}
 
-      {/* Matches tab (read-only) */}
-      {activeTab === 'matches' && (
-        <>
-          <SegmentedControl
-            segments={STATUS_SEGMENTS}
-            selected={statusFilter}
-            onChange={setStatusFilter}
-          />
-          <MatchPanel
-            matches={matches ?? []}
-            isFetching={matchesFetching}
-            refetch={matchesRefetch}
-            predictionMap={predictionMap}
-            onMatchPress={handleMatchesPress}
-            statusFilter={statusFilter}
-          />
-        </>
+      {/* Info tab */}
+      {activeTab === 'info' && (
+        <PoolInfoPanel
+          pool={pool}
+          members={members}
+          currentUserId={apiUser?.id}
+          onMemberRemoved={membersRefresh}
+          onLeavePool={() => router.replace('/(tabs)')}
+        />
       )}
     </Root>
   );
