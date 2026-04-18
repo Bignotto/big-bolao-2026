@@ -1,5 +1,5 @@
 import React from 'react';
-import { TextInput } from 'react-native';
+import { Pressable, TextInput } from 'react-native';
 import styled, { useTheme, type DefaultTheme } from 'styled-components/native';
 import { Ionicons } from '@expo/vector-icons';
 import { RFValue } from 'react-native-responsive-fontsize';
@@ -13,6 +13,10 @@ interface ScoreInputProps {
   onHomeChange: (val: string) => void;
   onAwayChange: (val: string) => void;
   locked: boolean;
+  onHomeIncrement?: () => void;
+  onHomeDecrement?: () => void;
+  onAwayIncrement?: () => void;
+  onAwayDecrement?: () => void;
 }
 
 const Wrapper = styled.View`
@@ -26,6 +30,11 @@ const Row = styled.View`
 
 const TeamCol = styled.View`
   align-items: center;
+`;
+
+const ScoreControls = styled.View`
+  align-items: center;
+  gap: ${Spaces.xsm}px;
 `;
 
 const TeamName = styled.Text`
@@ -47,6 +56,20 @@ const InputBox = styled.View<{ locked: boolean }>`
     locked ? theme.colors.shape_light : theme.colors.white};
   align-items: center;
   justify-content: center;
+`;
+
+const StepButton = styled(Pressable)<{ $disabled: boolean }>`
+  width: 36px;
+  height: 32px;
+  border-radius: ${BorderRadius.sm}px;
+  border-width: 1px;
+  border-color: ${({ theme, $disabled }: { $disabled: boolean; theme: DefaultTheme }) =>
+    $disabled ? theme.colors.border : theme.colors.primary};
+  background-color: ${({ theme, $disabled }: { $disabled: boolean; theme: DefaultTheme }) =>
+    $disabled ? theme.colors.shape_light : theme.colors.white};
+  align-items: center;
+  justify-content: center;
+  opacity: ${({ $disabled }: { $disabled: boolean }) => ($disabled ? 0.5 : 1)};
 `;
 
 const Separator = styled.Text`
@@ -78,6 +101,10 @@ export default function ScoreInput({
   onHomeChange,
   onAwayChange,
   locked,
+  onHomeIncrement,
+  onHomeDecrement,
+  onAwayIncrement,
+  onAwayDecrement,
 }: ScoreInputProps) {
   const theme = useTheme();
 
@@ -97,17 +124,45 @@ export default function ScoreInput({
           <TeamName numberOfLines={1} ellipsizeMode="tail">
             {homeTeamName}
           </TeamName>
-          <InputBox locked={locked}>
-            <TextInput
-              value={homeValue}
-              onChangeText={onHomeChange}
-              keyboardType="number-pad"
-              maxLength={2}
-              textAlign="center"
-              editable={!locked}
-              style={inputStyle}
-            />
-          </InputBox>
+          <ScoreControls>
+            <StepButton
+              $disabled={locked}
+              disabled={locked}
+              accessibilityRole="button"
+              accessibilityLabel={`Aumentar placar de ${homeTeamName}`}
+              onPress={onHomeIncrement}
+            >
+              <Ionicons
+                name="add"
+                size={IconSizes.sm}
+                color={locked ? theme.colors.text_disabled : theme.colors.primary}
+              />
+            </StepButton>
+            <InputBox locked={locked}>
+              <TextInput
+                value={homeValue}
+                onChangeText={onHomeChange}
+                keyboardType="number-pad"
+                maxLength={2}
+                textAlign="center"
+                editable={!locked}
+                style={inputStyle}
+              />
+            </InputBox>
+            <StepButton
+              $disabled={locked}
+              disabled={locked}
+              accessibilityRole="button"
+              accessibilityLabel={`Diminuir placar de ${homeTeamName}`}
+              onPress={onHomeDecrement}
+            >
+              <Ionicons
+                name="remove"
+                size={IconSizes.sm}
+                color={locked ? theme.colors.text_disabled : theme.colors.primary}
+              />
+            </StepButton>
+          </ScoreControls>
         </TeamCol>
 
         <Separator>×</Separator>
@@ -116,17 +171,45 @@ export default function ScoreInput({
           <TeamName numberOfLines={1} ellipsizeMode="tail">
             {awayTeamName}
           </TeamName>
-          <InputBox locked={locked}>
-            <TextInput
-              value={awayValue}
-              onChangeText={onAwayChange}
-              keyboardType="number-pad"
-              maxLength={2}
-              textAlign="center"
-              editable={!locked}
-              style={inputStyle}
-            />
-          </InputBox>
+          <ScoreControls>
+            <StepButton
+              $disabled={locked}
+              disabled={locked}
+              accessibilityRole="button"
+              accessibilityLabel={`Aumentar placar de ${awayTeamName}`}
+              onPress={onAwayIncrement}
+            >
+              <Ionicons
+                name="add"
+                size={IconSizes.sm}
+                color={locked ? theme.colors.text_disabled : theme.colors.primary}
+              />
+            </StepButton>
+            <InputBox locked={locked}>
+              <TextInput
+                value={awayValue}
+                onChangeText={onAwayChange}
+                keyboardType="number-pad"
+                maxLength={2}
+                textAlign="center"
+                editable={!locked}
+                style={inputStyle}
+              />
+            </InputBox>
+            <StepButton
+              $disabled={locked}
+              disabled={locked}
+              accessibilityRole="button"
+              accessibilityLabel={`Diminuir placar de ${awayTeamName}`}
+              onPress={onAwayDecrement}
+            >
+              <Ionicons
+                name="remove"
+                size={IconSizes.sm}
+                color={locked ? theme.colors.text_disabled : theme.colors.primary}
+              />
+            </StepButton>
+          </ScoreControls>
         </TeamCol>
       </Row>
 

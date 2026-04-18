@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Alert, ScrollView, ActivityIndicator, SafeAreaView } from 'react-native';
+import { ActivityIndicator, Alert, ScrollView, SafeAreaView } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import styled, { useTheme, type DefaultTheme } from 'styled-components/native';
 
@@ -16,9 +16,8 @@ import AppText from '@/components/AppComponents/AppText';
 import AppButton from '@/components/AppComponents/AppButton';
 import AppSpacer from '@/components/AppComponents/AppSpacer';
 import ScoreInput from '@/components/AppComponents/ScoreInput';
-import { Spaces, BorderRadius } from '@/constants/tokens';
-
-// ─── Stage labels ─────────────────────────────────────────────────────────────
+import { TeamFlag } from '@/components/matches/TeamFlag';
+import { BorderRadius, Spaces } from '@/constants/tokens';
 
 const STAGE_LABELS: Record<MatchStage, string> = {
   GROUP: 'Fase de Grupos',
@@ -31,25 +30,33 @@ const STAGE_LABELS: Record<MatchStage, string> = {
   FINAL: 'Final',
 };
 
-// ─── Datetime formatter ───────────────────────────────────────────────────────
-
 function formatMatchDatetime(iso: string): string {
   const date = new Date(iso);
+  const timeZone = 'America/Sao_Paulo';
   const datePart = new Intl.DateTimeFormat('pt-BR', {
     weekday: 'short',
-    day: 'numeric',
+    day: '2-digit',
     month: 'short',
+    timeZone,
   }).format(date);
   const timePart = new Intl.DateTimeFormat('pt-BR', {
     hour: '2-digit',
     minute: '2-digit',
+    hour12: false,
+    timeZone,
   }).format(date);
-  // Capitalise first letter and strip trailing dot from weekday abbreviation
   const cleaned = datePart.replace(/\.$/, '').replace(/^\w/, (c) => c.toUpperCase());
-  return `${cleaned} · ${timePart}`;
+  return `${cleaned} - ${timePart}`;
 }
 
-// ─── Styled ───────────────────────────────────────────────────────────────────
+function normalizeScoreInput(value: string): string {
+  return value.replace(/\D/g, '').slice(0, 2);
+}
+
+function nextScoreValue(value: string, delta: 1 | -1): string {
+  const current = value.trim() === '' ? 0 : Number(value);
+  return String(Math.max(0, Math.min(99, current + delta)));
+}
 
 const Root = styled(SafeAreaView)`
   flex: 1;
@@ -60,28 +67,83 @@ const CenteredFill = styled.View`
   flex: 1;
   align-items: center;
   justify-content: center;
-`;
-
-const MatchHeader = styled.View`
-  align-items: center;
   padding-horizontal: ${Spaces.md}px;
-  padding-top: ${Spaces.lg}px;
-  padding-bottom: ${Spaces.md}px;
 `;
 
-const RulesBox = styled.View`
-  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.shape_light};
+const PoolBanner = styled.View`
+  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.primary};
   border-radius: ${BorderRadius.sm}px;
-  padding: ${Spaces.sm}px;
-  margin-horizontal: ${Spaces.md}px;
+  padding: ${Spaces.sm}px ${Spaces.md}px;
+  margin: ${Spaces.lg}px ${Spaces.md}px 0;
+`;
+
+const MatchInfoCard = styled.View`
+  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.white};
+  border-radius: ${BorderRadius.sm}px;
+  padding: ${Spaces.lg}px ${Spaces.md}px;
+  margin: ${Spaces.md}px ${Spaces.md}px;
+  border-width: 1px;
+  border-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.shape};
+`;
+
+const MatchMeta = styled.View`
+  align-items: center;
+`;
+
+const TeamsRow = styled.View`
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: ${Spaces.lg}px;
+`;
+
+const TeamBlock = styled.View`
+  flex: 1;
+  align-items: center;
+`;
+
+const VersusBlock = styled.View`
+  width: 56px;
+  align-items: center;
+`;
+
+const DetailsRow = styled.View`
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: ${Spaces.xsm}px;
+  margin-top: ${Spaces.md}px;
+`;
+
+const DetailPill = styled.View`
+  border-radius: ${BorderRadius.sm}px;
+  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.shape_light};
+  padding: ${Spaces.xsm}px ${Spaces.sm}px;
+`;
+
+const Section = styled.View`
+  padding-horizontal: ${Spaces.md}px;
+`;
+
+const RulesCard = styled.View`
+  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.white};
+  border-radius: ${BorderRadius.sm}px;
+  padding: ${Spaces.md}px;
+  border-width: 1px;
+  border-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.shape};
+`;
+
+const RuleRow = styled.View`
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding-vertical: ${Spaces.xsm}px;
 `;
 
 const SubmitArea = styled.View`
   padding-horizontal: ${Spaces.md}px;
   padding-bottom: ${Spaces.lg}px;
 `;
-
-// ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function PredictScreen() {
   const { id, matchId: matchIdParam } = useLocalSearchParams<{
@@ -96,8 +158,6 @@ export default function PredictScreen() {
   const theme = useTheme();
   const { apiUser } = useSession();
 
-  // ── Data ────────────────────────────────────────────────────────────────────
-
   const { data: match, isLoading: matchLoading } = useMatch(matchId);
   const { pool, loading: poolLoading } = usePool(poolId);
   const { data: predictions, isLoading: predsLoading } = usePredictions(
@@ -107,20 +167,16 @@ export default function PredictScreen() {
   );
 
   const existingPrediction = predictions?.[0] ?? null;
+  const [homeValue, setHomeValue] = useState('0');
+  const [awayValue, setAwayValue] = useState('0');
 
-  // ── Form state ───────────────────────────────────────────────────────────────
-
-  const [homeValue, setHomeValue] = useState('');
-  const [awayValue, setAwayValue] = useState('');
-
-  // Sync values when the route changes or when the saved prediction loads.
   React.useEffect(() => {
     if (existingPrediction) {
       setHomeValue(String(existingPrediction.predictedHomeScore));
       setAwayValue(String(existingPrediction.predictedAwayScore));
     } else {
-      setHomeValue('');
-      setAwayValue('');
+      setHomeValue('0');
+      setAwayValue('0');
     }
   }, [
     matchId,
@@ -130,8 +186,6 @@ export default function PredictScreen() {
   ]);
 
   const mutation = useUpsertPrediction(poolId!);
-
-  // ── Loading ──────────────────────────────────────────────────────────────────
 
   if (matchLoading || poolLoading || predsLoading) {
     return (
@@ -155,56 +209,34 @@ export default function PredictScreen() {
     );
   }
 
-  // ── Lock guard ───────────────────────────────────────────────────────────────
-
   const locked = isMatchLocked(match);
+  const rules = pool.scoringRules;
+  const stageLabel = STAGE_LABELS[match.stage] ?? match.stage.replace(/_/g, ' ');
+  const groupLabel = match.stage === 'GROUP' && match.group ? `Grupo ${match.group}` : null;
+  const stadiumLabel = match.stadium ?? 'Estádio a definir';
 
-  if (locked) {
-    return (
-      <Root>
-        <ScrollView
-          contentContainerStyle={{ paddingVertical: Spaces.lg, alignItems: 'center' }}
-          showsVerticalScrollIndicator={false}
-        >
-          <AppText size="lg" bold align="center" style={{ paddingHorizontal: Spaces.md }}>
-            {match.homeTeam.name} vs {match.awayTeam.name}
-          </AppText>
-          <AppSpacer verticalSpace="md" />
-          <ScoreInput
-            homeTeamName={match.homeTeam.name}
-            awayTeamName={match.awayTeam.name}
-            homeValue={
-              existingPrediction != null
-                ? String(existingPrediction.predictedHomeScore)
-                : '0'
-            }
-            awayValue={
-              existingPrediction != null
-                ? String(existingPrediction.predictedAwayScore)
-                : '0'
-            }
-            onHomeChange={() => {}}
-            onAwayChange={() => {}}
-            locked
-          />
-          <AppSpacer verticalSpace="md" />
-          <AppText size="sm" color={theme.colors.text_gray} align="center" style={{ paddingHorizontal: Spaces.md }}>
-            Este jogo já começou. Palpites encerrados.
-          </AppText>
-          <AppSpacer verticalSpace="md" />
-          <AppButton
-            title="Ver partida"
-            variant="transparent"
-            onPress={() => router.back()}
-          />
-        </ScrollView>
-      </Root>
-    );
+  const canSubmit =
+    !locked &&
+    homeValue.trim().length > 0 &&
+    awayValue.trim().length > 0 &&
+    /^\d{1,2}$/.test(homeValue.trim()) &&
+    /^\d{1,2}$/.test(awayValue.trim()) &&
+    !mutation.isPending;
+
+  function handleHomeChange(value: string) {
+    setHomeValue(normalizeScoreInput(value));
   }
 
-  // ── Submit ───────────────────────────────────────────────────────────────────
+  function handleAwayChange(value: string) {
+    setAwayValue(normalizeScoreInput(value));
+  }
 
   function handleSubmit() {
+    if (locked) {
+      Alert.alert('Palpites encerrados', 'Este jogo já começou.');
+      return;
+    }
+
     if (!canSubmit) {
       Alert.alert('Palpite inválido', 'Informe placares entre 0 e 99 para os dois times.');
       return;
@@ -221,24 +253,12 @@ export default function PredictScreen() {
       predictedPenaltyAwayScore: null,
       predictionId: existingPrediction?.id,
     };
+
     mutation.mutate(payload, {
       onSuccess: () => router.back(),
       onError: (err) => Alert.alert('Erro', (err as Error).message),
     });
   }
-
-  const canSubmit =
-    homeValue.trim().length > 0 &&
-    awayValue.trim().length > 0 &&
-    /^\d{1,2}$/.test(homeValue.trim()) &&
-    /^\d{1,2}$/.test(awayValue.trim()) &&
-    !mutation.isPending;
-
-  const rules = pool.scoringRules;
-  const isKnockout = match.stage !== 'GROUP';
-  const isFinal = match.stage === 'FINAL';
-
-  // ── Form ─────────────────────────────────────────────────────────────────────
 
   return (
     <Root>
@@ -247,83 +267,189 @@ export default function PredictScreen() {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Match header */}
-        <MatchHeader>
-          <AppText size="lg" bold align="center">
-            {match.homeTeam.name} vs {match.awayTeam.name}
+        <PoolBanner>
+          <AppText size="xsm" color={theme.colors.primary_light} align="center">
+            Você está apostando no bolão
           </AppText>
           <AppSpacer verticalSpace="xsm" />
-          <AppText size="sm" color={theme.colors.text_gray} align="center">
-            {formatMatchDatetime(match.matchDatetime)}
+          <AppText size="md" bold color={theme.colors.white} align="center">
+            {pool.name}
           </AppText>
-          <AppSpacer verticalSpace="xsm" />
-          <AppText size="xsm" color={theme.colors.text_disabled} align="center">
-            {STAGE_LABELS[match.stage]}
-          </AppText>
-        </MatchHeader>
+        </PoolBanner>
 
-        {/* Score input */}
+        <MatchInfoCard>
+          <MatchMeta>
+            <AppText size="xsm" bold color={theme.colors.primary} align="center">
+              {stageLabel.toUpperCase()}
+            </AppText>
+            <AppSpacer verticalSpace="xsm" />
+            <AppText size="sm" color={theme.colors.text_gray} align="center">
+              {formatMatchDatetime(match.matchDatetime)}
+            </AppText>
+          </MatchMeta>
+
+          <TeamsRow>
+            <TeamBlock>
+              <TeamFlag
+                flagUrl={match.homeTeam.flagUrl}
+                teamName={match.homeTeam.name}
+                size="lg"
+              />
+              <AppSpacer verticalSpace="sm" />
+              <AppText size="md" bold align="center">
+                {match.homeTeam.countryCode ?? match.homeTeam.name}
+              </AppText>
+              <AppText size="xsm" color={theme.colors.text_gray} align="center">
+                {match.homeTeam.name}
+              </AppText>
+            </TeamBlock>
+
+            <VersusBlock>
+              <AppText size="lg" bold color={theme.colors.text_disabled} align="center">
+                x
+              </AppText>
+            </VersusBlock>
+
+            <TeamBlock>
+              <TeamFlag
+                flagUrl={match.awayTeam.flagUrl}
+                teamName={match.awayTeam.name}
+                size="lg"
+              />
+              <AppSpacer verticalSpace="sm" />
+              <AppText size="md" bold align="center">
+                {match.awayTeam.countryCode ?? match.awayTeam.name}
+              </AppText>
+              <AppText size="xsm" color={theme.colors.text_gray} align="center">
+                {match.awayTeam.name}
+              </AppText>
+            </TeamBlock>
+          </TeamsRow>
+
+          <DetailsRow>
+            {groupLabel && (
+              <DetailPill>
+                <AppText size="xsm" color={theme.colors.text_gray}>
+                  {groupLabel}
+                </AppText>
+              </DetailPill>
+            )}
+            <DetailPill>
+              <AppText size="xsm" color={theme.colors.text_gray}>
+                {stadiumLabel}
+              </AppText>
+            </DetailPill>
+          </DetailsRow>
+        </MatchInfoCard>
+
         <ScoreInput
           homeTeamName={match.homeTeam.name}
           awayTeamName={match.awayTeam.name}
           homeValue={homeValue}
           awayValue={awayValue}
-          onHomeChange={setHomeValue}
-          onAwayChange={setAwayValue}
-          locked={false}
+          onHomeChange={handleHomeChange}
+          onAwayChange={handleAwayChange}
+          onHomeIncrement={() => setHomeValue((value) => nextScoreValue(value, 1))}
+          onHomeDecrement={() => setHomeValue((value) => nextScoreValue(value, -1))}
+          onAwayIncrement={() => setAwayValue((value) => nextScoreValue(value, 1))}
+          onAwayDecrement={() => setAwayValue((value) => nextScoreValue(value, -1))}
+          locked={locked}
         />
 
         <AppSpacer verticalSpace="lg" />
 
-        {/* Scoring rules */}
+        {locked && (
+          <Section>
+            <AppText size="sm" color={theme.colors.text_gray} align="center">
+              Este jogo já começou. Palpites encerrados.
+            </AppText>
+          </Section>
+        )}
+
         {rules && (
           <>
-            <AppText
-              size="sm"
-              bold
-              color={theme.colors.text_gray}
-              style={{ paddingHorizontal: Spaces.md, marginBottom: Spaces.xsm }}
-            >
-              Como os pontos funcionam
-            </AppText>
-            <RulesBox>
-              <AppText size="xsm" color={theme.colors.text_gray}>
-                Placar exato: {rules.exactScorePoints} pts
+            <AppSpacer verticalSpace="md" />
+            <Section>
+              <AppText
+                size="sm"
+                bold
+                color={theme.colors.text_gray}
+                style={{ marginBottom: Spaces.xsm }}
+              >
+                Como os pontos funcionam
               </AppText>
-              <AppText size="xsm" color={theme.colors.text_gray}>
-                Vencedor + saldo: {rules.correctWinnerGoalDiffPoints} pts
-              </AppText>
-              <AppText size="xsm" color={theme.colors.text_gray}>
-                Vencedor: {rules.correctWinnerPoints} pts
-              </AppText>
-              <AppText size="xsm" color={theme.colors.text_gray}>
-                Empate: {rules.correctDrawPoints} pts
-              </AppText>
-              {isKnockout && !isFinal && (
-                <AppText size="xsm" color={theme.colors.text_gray}>
-                  Multiplicador eliminatórias: ×{rules.knockoutMultiplier}
-                </AppText>
-              )}
-              {isFinal && (
-                <AppText size="xsm" color={theme.colors.text_gray}>
-                  Multiplicador final: ×{rules.finalMultiplier}
-                </AppText>
-              )}
-            </RulesBox>
+              <RulesCard>
+                <RuleRow>
+                  <AppText size="xsm" color={theme.colors.text_gray}>
+                    Placar exato
+                  </AppText>
+                  <AppText size="xsm" bold>
+                    {rules.exactScorePoints} pts
+                  </AppText>
+                </RuleRow>
+                <RuleRow>
+                  <AppText size="xsm" color={theme.colors.text_gray}>
+                    Vencedor + saldo
+                  </AppText>
+                  <AppText size="xsm" bold>
+                    {rules.correctWinnerGoalDiffPoints} pts
+                  </AppText>
+                </RuleRow>
+                <RuleRow>
+                  <AppText size="xsm" color={theme.colors.text_gray}>
+                    Vencedor
+                  </AppText>
+                  <AppText size="xsm" bold>
+                    {rules.correctWinnerPoints} pts
+                  </AppText>
+                </RuleRow>
+                <RuleRow>
+                  <AppText size="xsm" color={theme.colors.text_gray}>
+                    Empate
+                  </AppText>
+                  <AppText size="xsm" bold>
+                    {rules.correctDrawPoints} pts
+                  </AppText>
+                </RuleRow>
+                <RuleRow>
+                  <AppText size="xsm" color={theme.colors.text_gray}>
+                    Multiplicador eliminatórias
+                  </AppText>
+                  <AppText size="xsm" bold>
+                    x{rules.knockoutMultiplier}
+                  </AppText>
+                </RuleRow>
+                <RuleRow>
+                  <AppText size="xsm" color={theme.colors.text_gray}>
+                    Multiplicador final
+                  </AppText>
+                  <AppText size="xsm" bold>
+                    x{rules.finalMultiplier}
+                  </AppText>
+                </RuleRow>
+              </RulesCard>
+            </Section>
           </>
         )}
 
         <AppSpacer verticalSpace="lg" />
 
-        {/* Submit */}
         <SubmitArea>
-          <AppButton
-            title={existingPrediction ? 'Atualizar palpite' : 'Salvar palpite'}
-            variant="solid"
-            isLoading={mutation.isPending}
-            disabled={!canSubmit}
-            onPress={handleSubmit}
-          />
+          {locked ? (
+            <AppButton
+              title="Ver partida"
+              variant="transparent"
+              onPress={() => router.back()}
+            />
+          ) : (
+            <AppButton
+              title={existingPrediction ? 'Atualizar palpite' : 'Salvar palpite'}
+              variant="solid"
+              isLoading={mutation.isPending}
+              disabled={!canSubmit}
+              onPress={handleSubmit}
+            />
+          )}
         </SubmitArea>
       </ScrollView>
     </Root>
