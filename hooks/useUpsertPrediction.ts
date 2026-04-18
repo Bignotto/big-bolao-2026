@@ -9,16 +9,37 @@ export function useUpsertPrediction(poolId: number) {
 
   return useMutation({
     mutationFn: async (payload: PredictionPayload) => {
-      if (payload.predictionId) {
+      const {
+        predictionId,
+        predictedHomeScore,
+        predictedAwayScore,
+        predictedHasExtraTime,
+        predictedHasPenalties,
+        predictedPenaltyHomeScore,
+        predictedPenaltyAwayScore,
+      } = payload;
+
+      const updateBody = {
+        predictedHomeScore,
+        predictedAwayScore,
+        predictedHasExtraTime,
+        predictedHasPenalties,
+        ...(predictedPenaltyHomeScore !== null && { predictedPenaltyHomeScore }),
+        ...(predictedPenaltyAwayScore !== null && { predictedPenaltyAwayScore }),
+      };
+
+      if (predictionId) {
         const data = await apiFetch<{ prediction: Prediction }>(
-          `/predictions/${payload.predictionId}`,
-          { method: 'PUT', body: JSON.stringify(payload) }
+          `/predictions/${predictionId}`,
+          { method: 'PUT', body: JSON.stringify(updateBody) }
         );
         return data.prediction ?? data;
       }
+
+      const createBody = { poolId: payload.poolId, matchId: payload.matchId, ...updateBody };
       const data = await apiFetch<{ prediction: Prediction }>(
         '/predictions',
-        { method: 'POST', body: JSON.stringify(payload) }
+        { method: 'POST', body: JSON.stringify(createBody) }
       );
       return data.prediction ?? data;
     },

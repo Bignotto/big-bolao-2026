@@ -32,7 +32,12 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
 
   if (!response.ok) {
     const body = await response.json().catch(() => ({}));
-    throw new ApiError(response.status, body?.message ?? `HTTP ${response.status}`);
+    const detail =
+      body?.issues?.[0]?.message ??
+      body?.message ??
+      body?.error ??
+      `HTTP ${response.status}`;
+    throw new ApiError(response.status, detail);
   }
 
   return response.json() as Promise<T>;

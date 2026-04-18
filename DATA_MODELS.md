@@ -27,10 +27,22 @@ ScoringRule
   correctWinnerPoints: number; correctDrawPoints: number; specialEventPoints: number;
   knockoutMultiplier: number; finalMultiplier: number; }
 
-Prediction
+Prediction (response)
 { id: number; poolId: number; matchId: number; userId: string; predictedHomeScore: number; predictedAwayScore: number;
   predictedHasExtraTime: boolean; predictedHasPenalties: boolean; predictedPenaltyHomeScore: number|null;
   predictedPenaltyAwayScore: number|null; submittedAt: string; updatedAt: string|null; pointsEarned: number|null; }
+
+PredictionPayload — POST /predictions body
+{ poolId: number; matchId: number; predictedHomeScore: number; predictedAwayScore: number;
+  predictedHasExtraTime: boolean; predictedHasPenalties: boolean;
+  predictedPenaltyHomeScore?: number;  // OMIT when null — backend uses .optional() not .nullable()
+  predictedPenaltyAwayScore?: number; }
+
+PredictionPayload — PUT /predictions/:id body (no poolId/matchId/predictionId)
+{ predictedHomeScore: number; predictedAwayScore: number;
+  predictedHasExtraTime: boolean; predictedHasPenalties: boolean;
+  predictedPenaltyHomeScore?: number;  // OMIT when null
+  predictedPenaltyAwayScore?: number; }
 
 MatchPredictionStatus (GET /matches/:matchId/predictions/me item)
 { poolId: number; poolName: string; matchId: number; prediction: Prediction|null; }
