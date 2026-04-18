@@ -1,7 +1,7 @@
 ---
 title: Registry de Hooks
 tags: [hooks, react-query, data-fetching]
-updated: 2026-04-17
+updated: 2026-04-18
 ---
 
 # Registry de Hooks
@@ -125,3 +125,43 @@ Ver: [[Screens/Screen-Profile]]
 **Uso:** Dono do bolão altera regras de pontuação
 
 Ver: [[Screens/Screen-PoolSettings]], [[API/Endpoints-Pools]]
+
+---
+
+## useRemovePoolMember
+
+**Arquivo:** `hooks/useRemovePoolMember.ts`
+**Tipo:** Mutation
+**Endpoint:** `DELETE /pools/:poolId/users/:userId`
+**Uso:** Admin remove um participante do bolão
+
+```ts
+const removeMutation = useRemovePoolMember(poolId);
+removeMutation.mutate(userId);
+```
+
+> [!warning] userId deve ser UUID
+> O backend valida `userId` como UUID (Supabase). Não enviar CUID.
+
+Invalida: `poolKeys.members`, `poolKeys.detail`
+Ver: [[Screens/Screen-PoolDetail]]
+
+---
+
+## useLeavePool
+
+**Arquivo:** `hooks/useLeavePool.ts`
+**Tipo:** Mutation
+**Endpoint:** `DELETE /pools/:poolId/users/me`
+**Uso:** Usuário sai do bolão (apenas membros não-admin)
+
+```ts
+const leaveMutation = useLeavePool(poolId);
+await leaveMutation.mutateAsync();
+```
+
+> [!note] Sem corpo na requisição
+> O `apiFetch` omite o header `Content-Type` quando não há body — necessário para que o backend aceite o DELETE.
+
+Invalida: `poolKeys.all`
+Ver: [[Screens/Screen-PoolDetail]]
