@@ -1,10 +1,9 @@
 import React from 'react';
 import type { PressableStateCallbackType } from 'react-native';
 import { Image, Pressable } from 'react-native';
-import styled, { type DefaultTheme } from 'styled-components/native';
+import styled, { useTheme, type DefaultTheme } from 'styled-components/native';
 import { Ionicons } from '@expo/vector-icons';
 import { RFValue } from 'react-native-responsive-fontsize';
-import { rgba } from 'polished';
 import { TextSizes, Spaces, BorderRadius, IconSizes } from '@/constants/tokens';
 import type { Match, Team } from '@/domain/entities/Match';
 import { isMatchLocked } from '@/domain/entities/Match';
@@ -69,10 +68,12 @@ const Badge = styled.View<{ bg: string }>`
 // ─── Team display ─────────────────────────────────────────────────────────────
 
 function TeamDisplay({ team }: { team: Team | undefined | null }) {
+  const theme = useTheme();
+
   if (!team) {
     return (
       <TeamCol>
-        <Txt size={TextSizes.sm} color="#B2BCBF" align="center">
+        <Txt size={TextSizes.sm} color={theme.colors.text_disabled} align="center">
           —
         </Txt>
       </TeamCol>
@@ -112,15 +113,10 @@ function ScheduledCenter({
   match: Match;
   prediction?: Prediction | null;
 }) {
+  const theme = useTheme();
   const dt = new Date(match.matchDatetime);
-  const timeStr = dt.toLocaleTimeString('pt-BR', {
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-  const dateStr = dt.toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-  });
+  const timeStr = dt.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const dateStr = dt.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
   const locked = isMatchLocked(match);
 
   const hasPrediction = prediction != null;
@@ -131,27 +127,26 @@ function ScheduledCenter({
   return (
     <CenterCol>
       <Row justify="center" style={{ gap: 4 }}>
-        <Txt size={TextSizes.sm} color={undefined} align="center">
+        <Txt size={TextSizes.sm} align="center">
           {timeStr}
         </Txt>
         {locked && (
           <Ionicons
             name="lock-closed-outline"
             size={IconSizes.xsm}
-            // color applied inline — useTheme not available here
-            color="#B2BCBF"
+            color={theme.colors.text_disabled}
           />
         )}
       </Row>
-      <Txt size={TextSizes.xsm} color="#5B7485" align="center">
+      <Txt size={TextSizes.xsm} color={theme.colors.text_gray} align="center">
         {dateStr}
       </Txt>
       <Txt
         size={TextSizes.sm}
-        color={hasPrediction ? '#065894' : '#B2BCBF'}
-        font={hasPrediction ? 'Inter_500Medium' : undefined}
+        color={hasPrediction ? theme.colors.primary : theme.colors.text_disabled}
+        font={hasPrediction ? theme.fonts.display : undefined}
         align="center"
-        style={{ marginTop: 4 }}
+        style={hasPrediction ? { marginTop: 4, fontVariant: ['tabular-nums'] } : { marginTop: 4 }}
       >
         {predictionLabel}
       </Txt>
@@ -160,6 +155,7 @@ function ScheduledCenter({
 }
 
 function InProgressCenter({ match, prediction }: { match: Match; prediction?: Prediction | null }) {
+  const theme = useTheme();
   const score = `${match.homeTeamScore ?? 0} – ${match.awayTeamScore ?? 0}`;
   const predLabel =
     prediction != null
@@ -168,10 +164,15 @@ function InProgressCenter({ match, prediction }: { match: Match; prediction?: Pr
 
   return (
     <CenterCol>
-      <Txt size={TextSizes.lg} font="Inter_700Bold" align="center">
+      <Txt
+        size={TextSizes.lg}
+        font={theme.fonts.display}
+        align="center"
+        style={{ fontVariant: ['tabular-nums'] }}
+      >
         {score}
       </Txt>
-      <Txt size={TextSizes.sm} color="#5B7485" align="center" style={{ marginTop: 2 }}>
+      <Txt size={TextSizes.sm} color={theme.colors.text_gray} align="center" style={{ marginTop: 2 }}>
         {predLabel}
       </Txt>
     </CenterCol>
@@ -179,6 +180,7 @@ function InProgressCenter({ match, prediction }: { match: Match; prediction?: Pr
 }
 
 function CompletedCenter({ match, prediction }: { match: Match; prediction?: Prediction | null }) {
+  const theme = useTheme();
   const score = `${match.homeTeamScore ?? 0} – ${match.awayTeamScore ?? 0}`;
   const pts = prediction?.pointsEarned;
   const hasPts = pts != null;
@@ -186,7 +188,12 @@ function CompletedCenter({ match, prediction }: { match: Match; prediction?: Pre
 
   return (
     <CenterCol>
-      <Txt size={TextSizes.lg} font="Inter_700Bold" align="center">
+      <Txt
+        size={TextSizes.lg}
+        font={theme.fonts.display}
+        align="center"
+        style={{ fontVariant: ['tabular-nums'] }}
+      >
         {score}
       </Txt>
       {prediction != null && (
@@ -196,18 +203,18 @@ function CompletedCenter({ match, prediction }: { match: Match; prediction?: Pre
               <Ionicons
                 name={hasPositive ? 'checkmark-circle' : 'close-circle'}
                 size={IconSizes.sm}
-                color={hasPositive ? '#12A454' : '#E83F5B'}
+                color={hasPositive ? theme.colors.positive : theme.colors.negative}
               />
               <Txt
                 size={TextSizes.sm}
-                color={hasPositive ? '#12A454' : '#E83F5B'}
-                font="Inter_700Bold"
+                color={hasPositive ? theme.colors.positive : theme.colors.negative}
+                font={theme.fonts.bold}
               >
                 +{pts} pts
               </Txt>
             </>
           ) : (
-            <Txt size={TextSizes.sm} color="#B2BCBF">
+            <Txt size={TextSizes.sm} color={theme.colors.text_disabled}>
               — pts
             </Txt>
           )}
@@ -218,9 +225,10 @@ function CompletedCenter({ match, prediction }: { match: Match; prediction?: Pre
 }
 
 function PostponedCenter() {
+  const theme = useTheme();
   return (
     <CenterCol>
-      <Txt size={TextSizes.sm} color="#B2BCBF" font="Inter_500Medium" align="center">
+      <Txt size={TextSizes.sm} color={theme.colors.text_disabled} font={theme.fonts.semi} align="center">
         ADIADO
       </Txt>
     </CenterCol>
@@ -236,6 +244,7 @@ interface MatchCardProps {
 }
 
 export default function MatchCard({ match, prediction, onPress }: MatchCardProps) {
+  const theme = useTheme();
   const { matchStatus } = match;
 
   return (
@@ -244,8 +253,8 @@ export default function MatchCard({ match, prediction, onPress }: MatchCardProps
       style={({ pressed }: PressableStateCallbackType) => ({ opacity: pressed ? 0.7 : 1 })}
     >
       {matchStatus === 'IN_PROGRESS' && (
-        <Badge bg="#FF872C">
-          <Txt size={TextSizes.xsm} color="#FFFFFF" font="Inter_700Bold">
+        <Badge bg={theme.colors.secondary}>
+          <Txt size={TextSizes.xsm} color={theme.colors.white} font={theme.fonts.bold}>
             AO VIVO
           </Txt>
         </Badge>

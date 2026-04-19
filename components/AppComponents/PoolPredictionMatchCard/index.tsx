@@ -125,7 +125,7 @@ function PredictionCenter({
     <CenterCol>
       {match.matchStatus !== 'SCHEDULED' && (
         <StatusBadge $status={match.matchStatus}>
-          <Txt size={TextSizes.xsm} color="#FFFFFF" font="Inter_700Bold">
+          <Txt size={TextSizes.xsm} color={theme.colors.white} font={theme.fonts.bold}>
             {statusLabel(match.matchStatus)}
           </Txt>
         </StatusBadge>
@@ -133,8 +133,9 @@ function PredictionCenter({
       <Txt
         size={TextSizes.lg}
         color={hasPrediction ? theme.colors.primary : theme.colors.text_disabled}
-        font={hasPrediction ? theme.fonts.bold : theme.fonts.regular}
+        font={theme.fonts.display}
         align="center"
+        style={{ fontVariant: ['tabular-nums'] }}
       >
         {predictionScore}
       </Txt>
@@ -149,7 +150,7 @@ function PredictionCenter({
             color={theme.colors.text_gray}
           />
           <Txt size={TextSizes.xsm} color={theme.colors.text_gray} align="center">
-            {hasPrediction ? 'Editar palpite' : 'Apostar'}
+            {hasPrediction ? 'Editar palpite' : 'Fazer palpite'}
           </Txt>
         </Row>
       ) : (

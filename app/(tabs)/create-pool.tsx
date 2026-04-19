@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, Switch } from 'react-native';
 import styled from 'styled-components/native';
 import type { DefaultTheme } from 'styled-components/native';
+import { useTheme } from 'styled-components/native';
 
 import AppButton from '@/components/AppComponents/AppButton';
 import AppInput from '@/components/AppComponents/AppInput';
@@ -17,6 +18,7 @@ const TOURNAMENT_ID = 1;
 
 export default function CreatePoolScreen() {
   const router = useRouter();
+  const theme = useTheme();
   const { createPool, loading, error } = useCreatePool();
 
   const [name, setName] = useState('');
@@ -83,7 +85,7 @@ export default function CreatePoolScreen() {
           <AppText size="lg" bold>
             Novo Grupo
           </AppText>
-          <AppText size="sm" color="#5B7485">
+          <AppText size="sm" color={theme.colors.text_gray}>
             Copa do Mundo 2026
           </AppText>
 
@@ -123,17 +125,17 @@ export default function CreatePoolScreen() {
           />
 
           <SectionLabel>
-            <AppText size="sm" bold color="#364A59">
+            <AppText size="sm" bold color={theme.colors.text}>
               Grupo privado
             </AppText>
             <Switch
               value={isPrivate}
               onValueChange={setIsPrivate}
-              trackColor={{ false: '#CED5D7', true: '#89CBFB' }}
-              thumbColor={isPrivate ? '#065894' : '#FFFFFF'}
+              trackColor={{ false: theme.colors.shape, true: theme.colors.primary_light }}
+              thumbColor={isPrivate ? theme.colors.primary : theme.colors.white}
             />
           </SectionLabel>
-          <AppText size="xsm" color="#5B7485" style={{ marginBottom: 4 }}>
+          <AppText size="xsm" color={theme.colors.text_gray} style={{ marginBottom: 4 }}>
             Grupos privados só podem ser acessados por código de convite.
           </AppText>
 
@@ -154,8 +156,8 @@ export default function CreatePoolScreen() {
             <>
               <AppSpacer verticalSpace="sm" />
               <ErrorBox>
-                <Ionicons name="alert-circle-outline" size={16} color="#E83F5B" />
-                <AppText size="sm" color="#E83F5B" style={{ marginLeft: 6, flex: 1 }}>
+                <Ionicons name="alert-circle-outline" size={16} color={theme.colors.negative} />
+                <AppText size="sm" color={theme.colors.negative} style={{ marginLeft: 6, flex: 1 }}>
                   {error}
                 </AppText>
               </ErrorBox>
@@ -167,7 +169,7 @@ export default function CreatePoolScreen() {
           <AppButton
             title="Criar grupo"
             variant="solid"
-            color="#065894"
+            color={theme.colors.primary}
             size="md"
             isLoading={loading}
             onPress={handleSubmit}
@@ -200,10 +202,10 @@ const SectionLabel = styled.View`
   margin-bottom: 4px;
 `;
 
-const ErrorBox = styled.View`
+const ErrorBox = styled.View<{ theme: DefaultTheme }>`
   flex-direction: row;
   align-items: center;
-  background-color: rgba(232, 63, 91, 0.08);
+  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.negative_light};
   border-radius: 8px;
   padding: 10px 12px;
 `;

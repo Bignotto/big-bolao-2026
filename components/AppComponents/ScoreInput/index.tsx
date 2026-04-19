@@ -111,10 +111,11 @@ export default function ScoreInput({
   const inputStyle = {
     width: 64,
     height: 64,
-    fontFamily: locked ? theme.fonts.regular : theme.fonts.bold,
+    fontFamily: theme.fonts.display,
     fontSize: RFValue(TextSizes.xlg),
     color: locked ? theme.colors.text_disabled : theme.colors.text,
     textAlign: 'center' as const,
+    fontVariant: ['tabular-nums'] as const,
   };
 
   return (
