@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import styled from 'styled-components/native';
 import type { DefaultTheme } from 'styled-components/native';
+import { useTheme } from 'styled-components/native';
 
 import AppButton from '@/components/AppComponents/AppButton';
 import AppNumberInput from '@/components/AppComponents/AppNumberInput';
@@ -15,6 +16,7 @@ import { useUpdateScoringRules } from '@/hooks/useUpdateScoringRules';
 export default function PoolSettingsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const theme = useTheme();
   const poolId = id ? Number(id) : undefined;
 
   const { pool, loading: poolLoading } = usePool(poolId);
@@ -138,7 +140,7 @@ export default function PoolSettingsScreen() {
     return (
       <Screen>
         <CenteredView>
-          <AppText size="sm" color="#5B7485">
+          <AppText size="sm" color={theme.colors.text_gray}>
             Carregando...
           </AppText>
         </CenteredView>
@@ -150,9 +152,9 @@ export default function PoolSettingsScreen() {
     return (
       <Screen>
         <CenteredView>
-          <Ionicons name="lock-closed-outline" size={40} color="#B2BCBF" />
+          <Ionicons name="lock-closed-outline" size={40} color={theme.colors.text_disabled} />
           <AppSpacer verticalSpace="md" />
-          <AppText size="sm" color="#5B7485" align="center">
+          <AppText size="sm" color={theme.colors.text_gray} align="center">
             Apenas o administrador do grupo pode editar as regras de pontuação.
           </AppText>
           <AppSpacer verticalSpace="md" />
@@ -176,15 +178,15 @@ export default function PoolSettingsScreen() {
           <AppText size="lg" bold>
             Regras de Pontuação
           </AppText>
-          <AppText size="sm" color="#5B7485">
+          <AppText size="sm" color={theme.colors.text_gray}>
             {pool?.name}
           </AppText>
 
           <AppSpacer verticalSpace="lg" />
 
           <WarningBox>
-            <Ionicons name="information-circle-outline" size={18} color="#B07800" />
-            <AppText size="xsm" color="#B07800" style={{ marginLeft: 8, flex: 1 }}>
+            <Ionicons name="information-circle-outline" size={18} color={theme.colors.attention_dark} />
+            <AppText size="xsm" color={theme.colors.attention_dark} style={{ marginLeft: 8, flex: 1 }}>
               Alterar as regras recalcula todos os pontos do grupo imediatamente.
             </AppText>
           </WarningBox>
@@ -301,8 +303,8 @@ export default function PoolSettingsScreen() {
             <>
               <AppSpacer verticalSpace="sm" />
               <ErrorBox>
-                <Ionicons name="alert-circle-outline" size={16} color="#E83F5B" />
-                <AppText size="sm" color="#E83F5B" style={{ marginLeft: 6, flex: 1 }}>
+                <Ionicons name="alert-circle-outline" size={16} color={theme.colors.negative} />
+                <AppText size="sm" color={theme.colors.negative} style={{ marginLeft: 6, flex: 1 }}>
                   {error}
                 </AppText>
               </ErrorBox>
@@ -314,7 +316,7 @@ export default function PoolSettingsScreen() {
           <AppButton
             title="Salvar regras"
             variant="solid"
-            color="#065894"
+            color={theme.colors.primary}
             size="md"
             isLoading={saving}
             onPress={handleSave}
@@ -349,34 +351,34 @@ const CenteredView = styled.View`
   padding: 32px;
 `;
 
-const SectionTitle = styled(AppText)`
+const SectionTitle = styled(AppText)<{ theme: DefaultTheme }>`
   font-size: 13px;
-  color: #5b7485;
+  color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.text_gray};
   text-transform: uppercase;
   letter-spacing: 0.8px;
   margin-bottom: 8px;
 `;
 
-const InfoText = styled(AppText)`
+const InfoText = styled(AppText)<{ theme: DefaultTheme }>`
   font-size: 12px;
-  color: #5b7485;
+  color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.text_gray};
   margin-top: 4px;
   margin-bottom: 4px;
   padding-horizontal: 4px;
 `;
 
-const WarningBox = styled.View`
+const WarningBox = styled.View<{ theme: DefaultTheme }>`
   flex-direction: row;
   align-items: flex-start;
-  background-color: rgba(176, 120, 0, 0.1);
+  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.attention_light};
   border-radius: 8px;
   padding: 10px 12px;
 `;
 
-const ErrorBox = styled.View`
+const ErrorBox = styled.View<{ theme: DefaultTheme }>`
   flex-direction: row;
   align-items: center;
-  background-color: rgba(232, 63, 91, 0.08);
+  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.negative_light};
   border-radius: 8px;
   padding: 10px 12px;
 `;

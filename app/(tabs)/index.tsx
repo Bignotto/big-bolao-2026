@@ -40,14 +40,14 @@ export default function DashboardScreen() {
           title="Novo Grupo"
           variant="solid"
           size="sm"
-          color="#065894"
-          leftIcon={<Ionicons name="add" size={18} color="#fff" />}
+          color={theme.colors.primary}
+          leftIcon={<Ionicons name="add" size={18} color={theme.colors.white} />}
           onPress={handleCreatePool}
         />
         <Ionicons
           name="log-out-outline"
           size={24}
-          color="#5B7485"
+          color={theme.colors.text_gray}
           onPress={signOut}
           style={{ marginLeft: 8 }}
         />
@@ -55,15 +55,15 @@ export default function DashboardScreen() {
 
       {loading && (
         <CenteredView>
-          <ActivityIndicator size="large" color="#065894" />
+          <ActivityIndicator size="large" color={theme.colors.primary} />
         </CenteredView>
       )}
 
       {!loading && !!error && (
         <CenteredView>
-          <Ionicons name="cloud-offline-outline" size={48} color="#B2BCBF" />
+          <Ionicons name="cloud-offline-outline" size={48} color={theme.colors.text_disabled} />
           <AppSpacer verticalSpace="md" />
-          <AppText size="sm" color="#E83F5B" align="center">
+          <AppText size="sm" color={theme.colors.negative} align="center">
             {error}
           </AppText>
           <AppSpacer verticalSpace="md" />
@@ -88,9 +88,9 @@ export default function DashboardScreen() {
         <AppButton
           title="Buscar um grupo para entrar"
           variant="solid"
-          color="#5B7485"
+          color={theme.colors.text_gray}
           size="md"
-          leftIcon={<Ionicons name="search-outline" size={18} color="#fff" />}
+          leftIcon={<Ionicons name="search-outline" size={18} color={theme.colors.white} />}
           onPress={handleFindPool}
         />
       </FindPoolBar>
@@ -99,12 +99,10 @@ export default function DashboardScreen() {
 }
 
 function PoolCard({ pool, onPress }: { pool: Pool; onPress: () => void }) {
-  function handlePress() {
-    onPress();
-  }
+  const theme = useTheme();
 
   return (
-    <CardPressable onPress={handlePress}>
+    <CardPressable onPress={onPress}>
       <CardHeader>
         <AppText size="md" bold numberOfLines={1} style={{ flex: 1 }}>
           {pool.name}
@@ -112,33 +110,33 @@ function PoolCard({ pool, onPress }: { pool: Pool; onPress: () => void }) {
         <BadgeRow>
           {pool.isCreator && (
             <AdminBadge>
-              <AppText size="xsm" color="#065894">
+              <AppText size="xsm" color={theme.colors.primary}>
                 Admin
               </AppText>
             </AdminBadge>
           )}
           {pool.isPrivate && (
-            <Ionicons name="lock-closed-outline" size={14} color="#5B7485" style={{ marginLeft: 6 }} />
+            <Ionicons name="lock-closed-outline" size={14} color={theme.colors.text_gray} style={{ marginLeft: 6 }} />
           )}
         </BadgeRow>
       </CardHeader>
 
       {!!pool.description && (
-        <AppText size="sm" color="#5B7485" numberOfLines={2} style={{ marginTop: 6 }}>
+        <AppText size="sm" color={theme.colors.text_gray} numberOfLines={2} style={{ marginTop: 6 }}>
           {pool.description}
         </AppText>
       )}
 
       <AppSpacer verticalSpace="sm" />
 
-      <AppText size="xsm" color="#5B7485" style={{ marginTop: 4 }}>
+      <AppText size="xsm" color={theme.colors.text_gray} style={{ marginTop: 4 }}>
         Palpites, ranking e calendário
       </AppText>
 
       <CardFooter>
         <FooterItem>
-          <Ionicons name="people-outline" size={14} color="#5B7485" />
-          <AppText size="xsm" color="#5B7485" style={{ marginLeft: 4 }}>
+          <Ionicons name="people-outline" size={14} color={theme.colors.text_gray} />
+          <AppText size="xsm" color={theme.colors.text_gray} style={{ marginLeft: 4 }}>
             {pool.participantsCount}{' '}
             {pool.participantsCount === 1 ? 'participante' : 'participantes'}
           </AppText>
@@ -146,8 +144,8 @@ function PoolCard({ pool, onPress }: { pool: Pool; onPress: () => void }) {
 
         {pool.maxParticipants != null && (
           <FooterItem style={{ marginLeft: 12 }}>
-            <Ionicons name="person-add-outline" size={14} color="#5B7485" />
-            <AppText size="xsm" color="#5B7485" style={{ marginLeft: 4 }}>
+            <Ionicons name="person-add-outline" size={14} color={theme.colors.text_gray} />
+            <AppText size="xsm" color={theme.colors.text_gray} style={{ marginLeft: 4 }}>
               máx. {pool.maxParticipants}
             </AppText>
           </FooterItem>
@@ -156,7 +154,7 @@ function PoolCard({ pool, onPress }: { pool: Pool; onPress: () => void }) {
         <Ionicons
           name="chevron-forward"
           size={16}
-          color="#B2BCBF"
+          color={theme.colors.text_disabled}
           style={{ marginLeft: 'auto' }}
         />
       </CardFooter>
@@ -165,21 +163,23 @@ function PoolCard({ pool, onPress }: { pool: Pool; onPress: () => void }) {
 }
 
 function EmptyPools({ onCreatePool, onFindPool }: { onCreatePool: () => void; onFindPool: () => void }) {
+  const theme = useTheme();
+
   return (
     <EmptyState>
-      <Ionicons name="people-outline" size={56} color="#B2BCBF" />
+      <Ionicons name="people-outline" size={56} color={theme.colors.text_disabled} />
       <AppSpacer verticalSpace="md" />
-      <AppText size="md" bold align="center" color="#364A59">
+      <AppText size="md" bold align="center" color={theme.colors.text}>
         Nenhum grupo ainda
       </AppText>
-      <AppText size="sm" align="center" color="#5B7485" style={{ marginTop: 6 }}>
+      <AppText size="sm" align="center" color={theme.colors.text_gray} style={{ marginTop: 6 }}>
         Crie um grupo ou use um código de convite para participar.
       </AppText>
       <AppSpacer verticalSpace="lg" />
       <AppButton
         title="Criar meu primeiro grupo"
         variant="solid"
-        color="#065894"
+        color={theme.colors.primary}
         size="md"
         onPress={onCreatePool}
       />
@@ -217,7 +217,7 @@ const FindPoolBar = styled.View<{ theme: DefaultTheme }>`
   padding: 12px 16px 16px;
   background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.background};
   border-top-width: 1px;
-  border-top-color: #eaeeef;
+  border-top-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.shape_light};
 `;
 
 const CardPressable = styled(Pressable)<{ theme: DefaultTheme }>`

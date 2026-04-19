@@ -19,6 +19,10 @@ const theme = {
     text_gray: '#5B7485',
     text_disabled: '#B2BCBF',
     attention: '#f1c47b',
+    attention_dark: '#B07800',
+    attention_light: 'rgba(176, 120, 0, 0.1)',
+
+    primary_bg: 'rgba(6, 88, 148, 0.08)',
 
     border: '#C4C4C4',
 
@@ -35,6 +39,7 @@ const theme = {
     semi: 'Inter_500Medium',
     bold: 'Inter_700Bold',
     black: 'Inter_900Black',
+    display: 'BarlowCondensed_700Bold',
   },
 };
 

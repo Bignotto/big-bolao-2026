@@ -1,3 +1,4 @@
+import { BarlowCondensed_700Bold } from '@expo-google-fonts/barlow-condensed';
 import {
   Inter_300Light,
   Inter_400Regular,
@@ -35,6 +36,7 @@ export default function RootLayout() {
     Inter_500Medium,
     Inter_700Bold,
     Inter_900Black,
+    BarlowCondensed_700Bold,
   });
 
   useEffect(() => {

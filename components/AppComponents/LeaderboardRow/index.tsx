@@ -72,6 +72,20 @@ const StatItem = styled.View`
   align-items: flex-end;
 `;
 
+const RankNum = styled.Text<{ color: string }>`
+  font-family: ${({ theme }: { theme: DefaultTheme }) => theme.fonts.display};
+  font-size: ${RFValue(TextSizes.md)}px;
+  color: ${({ color }: { color: string }) => color};
+  text-align: center;
+`;
+
+const PointsNum = styled.Text<{ color: string }>`
+  font-family: ${({ theme }: { theme: DefaultTheme }) => theme.fonts.display};
+  font-size: ${RFValue(TextSizes.lg)}px;
+  color: ${({ color }: { color: string }) => color};
+  text-align: right;
+`;
+
 function RankDisplay({ rank, theme }: { rank: number | null; theme: DefaultTheme }) {
   if (rank == null) {
     return (
@@ -92,15 +106,15 @@ function RankDisplay({ rank, theme }: { rank: number | null; theme: DefaultTheme
   }
   if (rank === 2 || rank === 3) {
     return (
-      <AppText bold size="sm" color={theme.colors.text_gray} align="center">
+      <RankNum color={theme.colors.text_gray} style={{ fontVariant: ['tabular-nums'] }}>
         {rank.toString()}
-      </AppText>
+      </RankNum>
     );
   }
   return (
-    <AppText size="sm" color={theme.colors.text_disabled} align="center">
+    <RankNum color={theme.colors.text_disabled} style={{ fontVariant: ['tabular-nums'] }}>
       {rank.toString()}
-    </AppText>
+    </RankNum>
   );
 }
 
@@ -142,9 +156,9 @@ export default function LeaderboardRow({
       </NameCell>
 
       <PointsCell>
-        <AppText bold size="md" color={theme.colors.primary}>
+        <PointsNum color={theme.colors.primary} style={{ fontVariant: ['tabular-nums'] }}>
           {entry.totalPoints}
-        </AppText>
+        </PointsNum>
       </PointsCell>
 
       <StatsCell>

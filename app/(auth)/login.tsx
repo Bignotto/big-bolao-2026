@@ -3,7 +3,7 @@ import { makeRedirectUri } from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import { useState } from 'react';
 import { Alert, Platform } from 'react-native';
-import styled, { type DefaultTheme } from 'styled-components/native';
+import styled, { useTheme, type DefaultTheme } from 'styled-components/native';
 
 import AppButton from '@/components/AppComponents/AppButton';
 import AppText from '@/components/AppComponents/AppText';
@@ -14,6 +14,7 @@ WebBrowser.maybeCompleteAuthSession();
 const redirectTo = makeRedirectUri({ scheme: 'bigbolao2026', path: 'auth/callback' });
 
 export default function LoginScreen() {
+  const theme = useTheme();
   const [googleLoading, setGoogleLoading] = useState(false);
 
   async function handleGoogleSignIn() {
@@ -78,7 +79,7 @@ export default function LoginScreen() {
   return (
     <Screen>
       <Hero>
-        <AppText size="xlg" bold color="#FFFFFF" align="center">
+        <AppText size="xlg" bold color={theme.colors.white} align="center">
           Big Bolão
         </AppText>
         <AppText size="md" color="rgba(255,255,255,0.75)" align="center">
@@ -90,7 +91,7 @@ export default function LoginScreen() {
         <AppText size="lg" bold align="center">
           Entrar
         </AppText>
-        <AppText size="sm" color="#5B7485" align="center" style={{ marginTop: 4, marginBottom: 32 }}>
+        <AppText size="sm" color={theme.colors.text_gray} align="center" style={{ marginTop: 4, marginBottom: 32 }}>
           Escolha como quer acessar o bolão
         </AppText>
 

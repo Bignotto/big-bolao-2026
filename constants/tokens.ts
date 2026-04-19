@@ -1,7 +1,7 @@
 export const TextSizes: { [size: string]: number } = {
   xlg: 32,
-  lg: 20,
-  md: 16,
+  lg: 23,
+  md: 18,
   sm: 14,
   xsm: 11,
 };

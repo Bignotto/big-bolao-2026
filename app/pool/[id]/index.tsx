@@ -111,7 +111,7 @@ const RankingSummary = styled.View`
   padding-horizontal: ${Spaces.md}px;
   padding-vertical: ${Spaces.md}px;
   border-radius: 10px;
-  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.positive};
+  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.primary};
 `;
 
 const SummaryItem = styled.View`
@@ -778,7 +778,7 @@ export default function PoolDetailsScreen() {
             >
               <Ionicons
                 name="settings-outline"
-                size={22}
+                size={IconSizes.md}
                 color={theme.colors.text_gray}
               />
             </SettingsButton>
@@ -829,7 +829,13 @@ export default function PoolDetailsScreen() {
                 {rankingSummary.map((item) => (
                   <SummaryItem key={item.label}>
                     <SummaryValueRow>
-                      <AppText bold size="lg" color={theme.colors.white} align="center">
+                      <AppText
+                        bold
+                        size="lg"
+                        color={theme.colors.white}
+                        align="center"
+                        style={{ fontFamily: theme.fonts.display, fontVariant: ['tabular-nums'] }}
+                      >
                         {item.value}
                       </AppText>
                     </SummaryValueRow>
