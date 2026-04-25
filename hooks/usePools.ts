@@ -18,6 +18,14 @@ export type Pool = {
   participantsCount: number;
   isCreator: boolean;
   isParticipant: boolean;
+  // Extended fields — populated when API returns standings/prediction data
+  isAdmin?: boolean;
+  userRank?: number | null;
+  userPoints?: number | null;
+  rankDelta?: number | null;
+  pendingPredictionsCount?: number;
+  pendingDeadlineSoon?: boolean;
+  pendingDeadlineCount?: number;
 };
 
 export function usePools() {

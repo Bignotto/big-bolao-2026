@@ -37,6 +37,14 @@ export default function RootLayout() {
     Inter_700Bold,
     Inter_900Black,
     BarlowCondensed_700Bold,
+    'BricolageGrotesque-Bold': require('../assets/fonts/BricolageGrotesque-Bold.ttf'),
+    // BG has no italic variant — SemiBold is registered under both names
+    'BricolageGrotesque-SemiBold': require('../assets/fonts/BricolageGrotesque-SemiBold.ttf'),
+    'BricolageGrotesque-SemiBoldItalic': require('../assets/fonts/BricolageGrotesque-SemiBold.ttf'),
+    'Geist-Regular': require('../assets/fonts/Geist-Regular.ttf'),
+    'Geist-Medium': require('../assets/fonts/Geist-Medium.ttf'),
+    'Geist-SemiBold': require('../assets/fonts/Geist-SemiBold.ttf'),
+    'GeistMono-Medium': require('../assets/fonts/GeistMono-Medium.ttf'),
   });
 
   useEffect(() => {
