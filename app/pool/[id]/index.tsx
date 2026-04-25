@@ -3,28 +3,28 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Pressable,
   RefreshControl,
   SafeAreaView,
-  ScrollView,
   SectionList,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import styled, { useTheme, type DefaultTheme } from 'styled-components/native';
+import { useTheme } from 'styled-components/native';
 
 import { usePool } from '@/hooks/usePool';
-import type { PoolDetail } from '@/hooks/usePool';
 import { usePoolStandings } from '@/hooks/usePoolStandings';
 import { usePoolMembers } from '@/hooks/usePoolMembers';
-import type { PoolMember } from '@/hooks/usePoolMembers';
 import { useMatches } from '@/hooks/useMatches';
 import { usePredictions } from '@/hooks/usePredictions';
-import { useRemovePoolMember } from '@/hooks/useRemovePoolMember';
 import { useLeavePool } from '@/hooks/useLeavePool';
 import { useSession } from '@/context/SessionContext';
 import type { Match } from '@/domain/entities/Match';
+import { MatchStage } from '@/domain/enums/MatchStage';
 import type { Prediction } from '@/domain/entities/Prediction';
-import { MatchStage, STAGE_LABELS } from '@/domain/enums/MatchStage';
 import {
   filterByDate,
   filterByGroup,
@@ -32,16 +32,11 @@ import {
   groupByRound,
 } from '@/domain/helpers/matchFilters';
 
-import AppText from '@/components/AppComponents/AppText';
-import AppSpacer from '@/components/AppComponents/AppSpacer';
 import AppButton from '@/components/AppComponents/AppButton';
-import PoolPredictionMatchCard from '@/components/AppComponents/PoolPredictionMatchCard';
-import AppAvatar from '@/components/AppComponents/AppAvatar';
+import MatchCard from '@/components/AppComponents/MatchCard';
 import LeaderboardRow from '@/components/AppComponents/LeaderboardRow';
+import { LeaderboardHeader } from '@/components/AppComponents/LeaderboardRow';
 import type { LeaderboardEntry } from '@/components/AppComponents/LeaderboardRow';
-import SegmentedControl, {
-  Segment,
-} from '@/components/AppComponents/SegmentedControl';
 import MatchFilterControls, {
   getAvailableDates,
   getDefaultMatchDate,
@@ -49,258 +44,96 @@ import MatchFilterControls, {
   type MatchFilterChipValue,
   type MatchFilterMode,
 } from '@/components/matches/MatchFilterControls';
-import { IconSizes, Spaces } from '@/constants/tokens';
+import { TypographyFamilies } from '@/constants/tokens';
 
-// ─── Tab & filter types ───────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 
-type MainTab = 'predictions' | 'standings' | 'info';
+type MainTab = 'standings' | 'predictions' | 'info';
 
-const MAIN_TABS: Segment<MainTab>[] = [
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function minutesSince(iso: string | null | undefined): number | null {
+  if (!iso) return null;
+  return Math.floor((Date.now() - new Date(iso).getTime()) / 60_000);
+}
+
+// ─── Underline tab bar ────────────────────────────────────────────────────────
+
+const TABS: { label: string; value: MainTab }[] = [
   { label: 'Ranking', value: 'standings' },
   { label: 'Palpites', value: 'predictions' },
   { label: 'Grupo', value: 'info' },
 ];
 
-// ─── Styled ───────────────────────────────────────────────────────────────────
-
-const Root = styled(SafeAreaView)`
-  flex: 1;
-  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.background};
-`;
-
-const HeaderArea = styled.View`
-  padding-top: ${Spaces.md}px;
-  padding-horizontal: ${Spaces.md}px;
-  padding-bottom: ${Spaces.sm}px;
-`;
-
-const HeaderRow = styled.View`
-  flex-direction: row;
-  align-items: flex-start;
-`;
-
-const HeaderTitles = styled.View`
-  flex: 1;
-`;
-
-const SettingsButton = styled.Pressable`
-  padding: ${Spaces.xsm}px;
-  margin-left: ${Spaces.sm}px;
-`;
-
-const CenteredFill = styled.View`
-  flex: 1;
-  align-items: center;
-  justify-content: center;
-  padding-horizontal: ${Spaces.md}px;
-`;
-
-const ListHeaderText = styled.View`
-  align-items: flex-end;
-  padding-horizontal: ${Spaces.md}px;
-  padding-vertical: ${Spaces.xsm}px;
-`;
-
-const RankingSummary = styled.View`
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  margin-horizontal: ${Spaces.md}px;
-  margin-top: ${Spaces.sm}px;
-  margin-bottom: ${Spaces.xsm}px;
-  padding-horizontal: ${Spaces.md}px;
-  padding-vertical: ${Spaces.md}px;
-  border-radius: 10px;
-  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.primary};
-`;
-
-const SummaryItem = styled.View`
-  flex: 1;
-  align-items: center;
-`;
-
-const SummaryValueRow = styled.View`
-  min-height: 28px;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-`;
-
-const StandingsFooter = styled.View`
-  padding-horizontal: ${Spaces.md}px;
-  padding-top: ${Spaces.md}px;
-  padding-bottom: ${Spaces.lg}px;
-`;
-
-const StandingsTableHeader = styled.View`
-  flex-direction: row;
-  align-items: center;
-  min-height: 34px;
-  padding-horizontal: ${Spaces.md}px;
-  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.shape_light};
-  border-bottom-width: 0.5px;
-  border-bottom-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.border};
-`;
-
-const RankHeaderCell = styled.View`
-  width: 36px;
-`;
-
-const NameHeaderCell = styled.View`
-  flex: 1;
-  margin-left: ${IconSizes.lg + Spaces.sm}px;
-  margin-right: ${Spaces.sm}px;
-`;
-
-const PointsHeaderCell = styled.View`
-  width: 48px;
-  align-items: flex-end;
-  margin-left: ${Spaces.sm}px;
-`;
-
-const StatsHeaderCell = styled.View`
-  justify-content: flex-end;
-  width: 48px;
-  margin-left: ${Spaces.md}px;
-`;
-
-const StatHeaderItem = styled.View`
-  align-items: flex-end;
-`;
-
-const SectionHeaderRow = styled.View`
-  flex-direction: row;
-  align-items: center;
-  gap: ${Spaces.sm}px;
-  padding-horizontal: ${Spaces.md}px;
-  padding-top: ${Spaces.md}px;
-  padding-bottom: ${Spaces.sm}px;
-  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.background};
-`;
-
-const SectionLine = styled.View`
-  flex: 1;
-  height: 1px;
-  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.border};
-`;
-
-const InfoScroll = styled(ScrollView)`
-  flex: 1;
-`;
-
-const InfoSection = styled.View`
-  margin-top: ${Spaces.md}px;
-`;
-
-const InfoSectionHeader = styled.View`
-  flex-direction: row;
-  align-items: center;
-  padding-horizontal: ${Spaces.md}px;
-  padding-vertical: ${Spaces.sm}px;
-  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.shape_light};
-  border-bottom-width: 0.5px;
-  border-bottom-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.border};
-`;
-
-const ScoringRow = styled.View`
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  padding-horizontal: ${Spaces.md}px;
-  padding-vertical: ${Spaces.sm}px;
-  border-bottom-width: 0.5px;
-  border-bottom-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.border};
-  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.white};
-`;
-
-const MemberRow = styled.View`
-  flex-direction: row;
-  align-items: center;
-  height: 60px;
-  padding-horizontal: ${Spaces.md}px;
-  border-bottom-width: 0.5px;
-  border-bottom-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.border};
-  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.white};
-`;
-
-const MemberNameCell = styled.View`
-  flex: 1;
-  flex-direction: row;
-  align-items: center;
-  margin-horizontal: ${Spaces.sm}px;
-`;
-
-const RemoveButton = styled.Pressable`
-  padding: ${Spaces.xsm}px;
-`;
-
-const InfoFooter = styled.View`
-  padding-horizontal: ${Spaces.md}px;
-  padding-top: ${Spaces.md}px;
-  padding-bottom: ${Spaces.lg}px;
-`;
-
-const MATCH_LIST_CONTENT = {
-  paddingHorizontal: Spaces.md,
-  paddingBottom: Spaces.lg,
-  flexGrow: 1,
-} as const;
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function minutesSince(iso: string | null | undefined): number | null {
-  if (!iso) return null;
-  const diff = Date.now() - new Date(iso).getTime();
-  return Math.floor(diff / 60_000);
+function TabBar({
+  active,
+  onChange,
+}: {
+  active: MainTab;
+  onChange: (t: MainTab) => void;
+}) {
+  const theme = useTheme();
+  return (
+    <View
+      style={[
+        s.tabBar,
+        { borderBottomColor: theme.colors.ink800, backgroundColor: theme.colors.background },
+      ]}
+    >
+      {TABS.map((tab) => {
+        const isActive = tab.value === active;
+        return (
+          <Pressable
+            key={tab.value}
+            onPress={() => onChange(tab.value)}
+            style={s.tabItem}
+          >
+            <Text
+              style={[
+                s.tabLabel,
+                { color: isActive ? theme.colors.ink100 : theme.colors.ink500 },
+                isActive && s.tabLabelActive,
+              ]}
+            >
+              {tab.label}
+            </Text>
+            {isActive && (
+              <View style={[s.tabUnderline, { backgroundColor: theme.colors.pitch }]} />
+            )}
+          </Pressable>
+        );
+      })}
+    </View>
+  );
 }
 
-function formatDeadline(iso: string): string {
-  return new Date(iso).toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
-}
-
-function formatDDMM(datetime: string): string {
-  return new Date(datetime).toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-  });
-}
-
-function getDateModeSubtext(match: Match): string {
-  if (match.stage === MatchStage.GROUP) return `Grupo ${match.group ?? ''}`;
-  return STAGE_LABELS[match.stage as MatchStage] ?? match.stage;
-}
-
-type PredictionMatchPanelProps = {
-  matches: Match[];
-  isFetching: boolean;
-  refetch: () => void;
-  predictionMap: Map<number, Prediction>;
-  onMatchPress: (match: Match) => void;
-  mode: MatchFilterMode;
-  selectedChip: MatchFilterChipValue;
-  selectedDate: string | null;
-  onModeChange: (mode: MatchFilterMode) => void;
-  onChipChange: (chip: MatchFilterChipValue) => void;
-  onDateChange: (date: string) => void;
-};
+// ─── Predictions panel ────────────────────────────────────────────────────────
 
 function PredictionMatchPanel({
   matches,
   isFetching,
   refetch,
   predictionMap,
-  onMatchPress,
+  poolId,
   mode,
   selectedChip,
   selectedDate,
   onModeChange,
   onChipChange,
   onDateChange,
-}: PredictionMatchPanelProps) {
+}: {
+  matches: Match[];
+  isFetching: boolean;
+  refetch: () => void;
+  predictionMap: Map<number, Prediction>;
+  poolId: number;
+  mode: MatchFilterMode;
+  selectedChip: MatchFilterChipValue;
+  selectedDate: string | null;
+  onModeChange: (m: MatchFilterMode) => void;
+  onChipChange: (c: MatchFilterChipValue) => void;
+  onDateChange: (d: string) => void;
+}) {
   const theme = useTheme();
   const availableDates = useMemo(() => getAvailableDates(matches), [matches]);
   const defaultDate = useMemo(() => getDefaultMatchDate(matches), [matches]);
@@ -308,16 +141,13 @@ function PredictionMatchPanel({
 
   const sections = useMemo(() => {
     if (isGroupChip(selectedChip)) {
-      return groupByRound(filterByGroup(matches, selectedChip)).map(
-        ({ round, matches: roundMatches }) => ({
-          title: `Grupo ${selectedChip} · Rodada ${round}`,
-          data: roundMatches,
-        }),
-      );
+      return groupByRound(filterByGroup(matches, selectedChip)).map(({ round, matches: ms }) => ({
+        title: `Grupo ${selectedChip} · Rodada ${round}`,
+        data: ms,
+      }));
     }
-
     const stage = selectedChip as MatchStage;
-    return [{ title: STAGE_LABELS[stage], data: filterByStage(matches, stage) }];
+    return [{ title: stage, data: filterByStage(matches, stage) }];
   }, [matches, selectedChip]);
 
   const dateMatches = useMemo(
@@ -329,17 +159,16 @@ function PredictionMatchPanel({
     <RefreshControl
       refreshing={isFetching}
       onRefresh={refetch}
-      colors={[theme.colors.primary]}
-      tintColor={theme.colors.primary}
+      tintColor={theme.colors.pitch}
     />
   );
 
-  const emptyComponent = (
-    <CenteredFill>
-      <AppText size="sm" color={theme.colors.text_gray} align="center">
+  const empty = (
+    <View style={s.centered}>
+      <Text style={[s.emptyTxt, { color: theme.colors.ink500 }]}>
         Nenhuma partida encontrada
-      </AppText>
-    </CenteredFill>
+      </Text>
+    </View>
   );
 
   return (
@@ -353,30 +182,26 @@ function PredictionMatchPanel({
         onChipChange={onChipChange}
         onDateChange={onDateChange}
       />
-
       {mode === 'group-stage' ? (
         <SectionList
           sections={sections}
           keyExtractor={(item) => String(item.id)}
-          contentContainerStyle={MATCH_LIST_CONTENT}
+          contentContainerStyle={s.listContent}
           stickySectionHeadersEnabled
           refreshControl={refreshControl}
-          ListEmptyComponent={emptyComponent}
-          ItemSeparatorComponent={() => <AppSpacer verticalSpace="xsm" />}
+          ListEmptyComponent={empty}
           renderSectionHeader={({ section }) => (
-            <SectionHeaderRow>
-              <AppText size="xsm" bold color={theme.colors.text_gray}>
+            <View style={[s.sectionHeader, { backgroundColor: theme.colors.background }]}>
+              <Text style={[s.sectionTitle, { color: theme.colors.ink500 }]}>
                 {section.title.toUpperCase()}
-              </AppText>
-              <SectionLine />
-            </SectionHeaderRow>
+              </Text>
+              <View style={[s.sectionLine, { backgroundColor: theme.colors.ink800 }]} />
+            </View>
           )}
           renderItem={({ item }) => (
-            <PoolPredictionMatchCard
+            <MatchCard
               match={item}
-              prediction={predictionMap.get(item.id) ?? null}
-              centerSubtext={formatDDMM(item.matchDatetime)}
-              onPress={() => onMatchPress(item)}
+              poolContext={{ poolId, userPrediction: predictionMap.get(item.id) }}
             />
           )}
         />
@@ -384,183 +209,18 @@ function PredictionMatchPanel({
         <FlatList<Match>
           data={dateMatches}
           keyExtractor={(item) => String(item.id)}
-          contentContainerStyle={MATCH_LIST_CONTENT}
+          contentContainerStyle={s.listContent}
           refreshControl={refreshControl}
-          ListEmptyComponent={emptyComponent}
-          ItemSeparatorComponent={() => <AppSpacer verticalSpace="xsm" />}
+          ListEmptyComponent={empty}
           renderItem={({ item }) => (
-            <PoolPredictionMatchCard
+            <MatchCard
               match={item}
-              prediction={predictionMap.get(item.id) ?? null}
-              centerSubtext={getDateModeSubtext(item)}
-              onPress={() => onMatchPress(item)}
+              poolContext={{ poolId, userPrediction: predictionMap.get(item.id) }}
             />
           )}
         />
       )}
     </>
-  );
-}
-
-// ─── Pool Info panel ─────────────────────────────────────────────────────────
-
-type PoolInfoPanelProps = {
-  pool: PoolDetail;
-  members: PoolMember[];
-  currentUserId: string | undefined;
-  onMemberRemoved: () => void;
-  onLeavePool: () => void;
-};
-
-function PoolInfoPanel({
-  pool,
-  members,
-  currentUserId,
-  onMemberRemoved,
-  onLeavePool,
-}: PoolInfoPanelProps) {
-  const theme = useTheme();
-  const removeMutation = useRemovePoolMember(pool.id);
-  const leaveMutation = useLeavePool(pool.id);
-
-  const rules = pool.scoringRules;
-  const scoringRows = [
-    { label: 'Placar exato', value: `${rules.exactScorePoints} pts` },
-    { label: 'Vencedor + saldo de gols', value: `${rules.correctWinnerGoalDiffPoints} pts` },
-    { label: 'Vencedor correto', value: `${rules.correctWinnerPoints} pts` },
-    { label: 'Empate correto', value: `${rules.correctDrawPoints} pts` },
-    { label: 'Multiplicador eliminatórias', value: `${rules.knockoutMultiplier}×` },
-    { label: 'Multiplicador final', value: `${rules.finalMultiplier}×` },
-  ];
-
-  function handleRemove(member: PoolMember) {
-    const name = member.fullName ?? member.name ?? 'Participante';
-    Alert.alert(
-      'Remover participante',
-      `Deseja remover ${name} do grupo?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Remover',
-          style: 'destructive',
-          onPress: () =>
-            removeMutation.mutate(member.id, { onSuccess: onMemberRemoved }),
-        },
-      ],
-    );
-  }
-
-  function handleLeave() {
-    Alert.alert(
-      'Sair do grupo',
-      'Tem certeza que deseja sair deste grupo? Seu histórico de palpites será mantido.',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Sair',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await leaveMutation.mutateAsync();
-              onLeavePool();
-            } catch (e) {
-              Alert.alert('Erro', (e as Error).message ?? 'Não foi possível sair do grupo.');
-            }
-          },
-        },
-      ],
-    );
-  }
-
-  return (
-    <InfoScroll contentContainerStyle={{ paddingBottom: Spaces.lg }}>
-      {/* Scoring rules */}
-      <InfoSection>
-        <InfoSectionHeader>
-          <AppText bold size="xsm" color={theme.colors.text_gray}>
-            REGRAS DE PONTUAÇÃO
-          </AppText>
-        </InfoSectionHeader>
-        {scoringRows.map((row) => (
-          <ScoringRow key={row.label}>
-            <AppText size="sm" color={theme.colors.text}>
-              {row.label}
-            </AppText>
-            <AppText bold size="sm" color={theme.colors.primary}>
-              {row.value}
-            </AppText>
-          </ScoringRow>
-        ))}
-      </InfoSection>
-
-      {/* Participants */}
-      <InfoSection>
-        <InfoSectionHeader>
-          <AppText bold size="xsm" color={theme.colors.text_gray}>
-            PARTICIPANTES ({members.length})
-          </AppText>
-        </InfoSectionHeader>
-        {members.map((member) => {
-          const isMe = member.id === currentUserId;
-          const isRemoving =
-            removeMutation.isPending && removeMutation.variables === member.id;
-          return (
-            <MemberRow key={member.id}>
-              <AppAvatar
-                imagePath={member.profileImageUrl ?? undefined}
-                name={member.fullName ?? member.name ?? 'P'}
-                size={IconSizes.lg}
-              />
-              <MemberNameCell>
-                <AppText
-                  bold={isMe}
-                  size="sm"
-                  numberOfLines={1}
-                  ellipsizeMode="tail"
-                  style={{ flex: 1 }}
-                >
-                  {member.fullName ?? member.name ?? 'Participante'}
-                </AppText>
-                {isMe && (
-                  <AppText size="xsm" color={theme.colors.text_gray}>
-                    {' '}(você)
-                  </AppText>
-                )}
-              </MemberNameCell>
-              {pool.isCreator && !isMe && (
-                <RemoveButton
-                  onPress={() => handleRemove(member)}
-                  disabled={isRemoving}
-                  accessibilityLabel={`Remover ${member.fullName ?? member.name}`}
-                >
-                  {isRemoving ? (
-                    <ActivityIndicator size="small" color={theme.colors.negative} />
-                  ) : (
-                    <Ionicons
-                      name="trash-outline"
-                      size={IconSizes.sm}
-                      color={theme.colors.negative}
-                    />
-                  )}
-                </RemoveButton>
-              )}
-            </MemberRow>
-          );
-        })}
-      </InfoSection>
-
-      {/* Leave pool footer — only for non-admins */}
-      {!pool.isCreator && (
-        <InfoFooter>
-          <AppButton
-            title="Sair do Grupo"
-            variant="negative"
-            isLoading={leaveMutation.isPending}
-            onPress={handleLeave}
-          />
-        </InfoFooter>
-      )}
-    </InfoScroll>
   );
 }
 
@@ -574,72 +234,51 @@ export default function PoolDetailsScreen() {
   const { apiUser } = useSession();
 
   const [activeTab, setActiveTab] = useState<MainTab>('standings');
-  const [predictionFilterMode, setPredictionFilterMode] =
-    useState<MatchFilterMode>('group-stage');
-  const [predictionSelectedChip, setPredictionSelectedChip] =
-    useState<MatchFilterChipValue>('A');
-  const [predictionSelectedDate, setPredictionSelectedDate] = useState<string | null>(null);
+  const [predFilterMode, setPredFilterMode] = useState<MatchFilterMode>('group-stage');
+  const [predChip, setPredChip] = useState<MatchFilterChipValue>('A');
+  const [predDate, setPredDate] = useState<string | null>(null);
 
   // ── Data ────────────────────────────────────────────────────────────────────
 
   const { pool, loading: poolLoading, error: poolError, refresh: poolRefresh } = usePool(poolId);
 
-  const {
-    data: matches,
-    isFetching: matchesFetching,
-    refetch: matchesRefetch,
-  } = useMatches();
+  const { matches, isFetching: matchesFetching, refetch: matchesRefetch } = useMatches();
 
-  const matchIds = useMemo(() => (matches ?? []).map((m) => m.id), [matches]);
-
+  const matchIds = useMemo(() => matches.map((m) => m.id), [matches]);
   const { data: predictions } = usePredictions(poolId, matchIds, apiUser?.id);
 
   const predictionMap = useMemo(() => {
     const map = new Map<number, Prediction>();
-    for (const pred of predictions ?? []) {
-      map.set(pred.matchId, pred);
-    }
+    for (const pred of predictions ?? []) map.set(pred.matchId, pred);
     return map;
   }, [predictions]);
 
-  const {
-    standings,
-    loading: standingsLoading,
-    refresh: standingsRefresh,
-  } = usePoolStandings(poolId);
-
-  const {
-    members,
-    loading: membersLoading,
-    error: membersError,
-    refresh: membersRefresh,
-  } = usePoolMembers(poolId);
-
-  const lastUpdatedMinutes = minutesSince(standings[0]?.lastUpdated);
+  const { standings, loading: standingsLoading, refresh: standingsRefresh } = usePoolStandings(poolId);
+  const { members, loading: membersLoading, error: membersError, refresh: membersRefresh } = usePoolMembers(poolId);
+  const leaveMutation = useLeavePool(poolId ?? 0);
 
   const memberById = useMemo(() => {
     const map = new Map<string, (typeof members)[number]>();
-    for (const member of members) {
-      map.set(member.id, member);
+    for (const m of members) {
+      if (m.id) map.set(m.id, m);
+      const raw = m as Record<string, unknown>;
+      if (typeof raw.userId === 'string' && raw.userId) map.set(raw.userId, m);
     }
     return map;
   }, [members]);
 
-  // Adapt API shape (fullName) to LeaderboardRow shape (name)
   const leaderboardEntries: LeaderboardEntry[] = useMemo(
     () =>
       standings.map((s, index) => {
-        const standing = s as typeof s & {
-          exactScoreCount?: number;
-          user?: Record<string, unknown>;
-        };
+        const standing = s as typeof s & { exactScoreCount?: number; user?: Record<string, unknown> };
         const user = standing.user;
         const userId =
           standing.userId ??
           (typeof user?.id === 'string' ? user.id : null) ??
           String(index);
-        const member = memberById.get(userId);
-
+        const member =
+          memberById.get(userId) ??
+          (typeof user?.id === 'string' ? memberById.get(user.id) : undefined);
         return {
           poolId: standing.poolId ?? poolId ?? 0,
           userId,
@@ -653,16 +292,12 @@ export default function PoolDetailsScreen() {
             name:
               (typeof user?.fullName === 'string' ? user.fullName : null) ??
               (typeof user?.name === 'string' ? user.name : null) ??
-              member?.fullName ??
-              member?.name ??
-              'Participante',
+              member?.fullName ?? member?.name ?? 'Participante',
             profileImageUrl:
               (typeof user?.profileImageUrl === 'string' ? user.profileImageUrl : null) ??
               (typeof user?.avatarUrl === 'string' ? user.avatarUrl : null) ??
               (typeof user?.photoUrl === 'string' ? user.photoUrl : null) ??
-              (typeof user?.picture === 'string' ? user.picture : null) ??
-              member?.profileImageUrl ??
-              null,
+              member?.profileImageUrl ?? null,
           },
         };
       }),
@@ -671,18 +306,18 @@ export default function PoolDetailsScreen() {
 
   const memberEntries: LeaderboardEntry[] = useMemo(
     () =>
-      members.map((member) => ({
+      members.map((m) => ({
         poolId: poolId ?? 0,
-        userId: member.id,
+        userId: m.id,
         totalPoints: 0,
         exactScoresCount: 0,
         correctWinnersCount: 0,
         rank: null,
         lastUpdated: null,
         user: {
-          id: member.id,
-          name: member.fullName ?? member.name ?? 'Participante',
-          profileImageUrl: member.profileImageUrl,
+          id: m.id,
+          name: m.fullName ?? m.name ?? 'Participante',
+          profileImageUrl: m.profileImageUrl,
         },
       })),
     [members, poolId],
@@ -690,127 +325,172 @@ export default function PoolDetailsScreen() {
 
   const showMemberFallback = !standingsLoading && leaderboardEntries.length === 0;
   const rankingEntries = showMemberFallback ? memberEntries : leaderboardEntries;
-  const currentUserEntry = rankingEntries.find((entry) => entry.userId === apiUser?.id);
+  const currentUserEntry = rankingEntries.find((e) => e.userId === apiUser?.id);
   const currentUserRank = currentUserEntry?.rank ?? null;
-  const rankingSummary = [
-    { label: 'Ranking', value: currentUserRank != null ? `# ${currentUserRank}` : '-' },
-    { label: 'Pontos', value: String(currentUserEntry?.totalPoints ?? 0) },
-    { label: 'Exatos', value: String(currentUserEntry?.exactScoresCount ?? 0) },
-  ];
+  const lastUpdatedMinutes = minutesSince(standings[0]?.lastUpdated);
+
+  // Group stage matches for Grupo tab
+  const groupSections = useMemo(() => {
+    const gm = (matches ?? []).filter((m) => m.stage === MatchStage.GROUP);
+    const byGroup = new Map<string, Match[]>();
+    for (const m of gm) {
+      const g = (m as any).group ?? '?';
+      if (!byGroup.has(g)) byGroup.set(g, []);
+      byGroup.get(g)!.push(m);
+    }
+    return Array.from(byGroup.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([g, ms]) => ({ title: `Grupo ${g}`, data: ms }));
+  }, [matches]);
 
   // ── Loading / Error ──────────────────────────────────────────────────────────
 
   if (poolLoading) {
     return (
-      <Root>
-        <CenteredFill>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
-        </CenteredFill>
-      </Root>
+      <SafeAreaView style={[s.root, { backgroundColor: theme.colors.background }]}>
+        <View style={s.centered}>
+          <ActivityIndicator size="large" color={theme.colors.pitch} />
+        </View>
+      </SafeAreaView>
     );
   }
 
   if (poolError || !pool) {
     return (
-      <Root>
-        <CenteredFill>
-          <AppText size="sm" color={theme.colors.negative} align="center">
+      <SafeAreaView style={[s.root, { backgroundColor: theme.colors.background }]}>
+        <View style={s.centered}>
+          <Text style={[s.emptyTxt, { color: theme.colors.signalLose }]}>
             {poolError ?? 'Grupo não encontrado.'}
-          </AppText>
-          <AppSpacer verticalSpace="md" />
-          <AppButton
-            title="Tentar novamente"
-            variant="transparent"
-            onPress={() => poolRefresh()}
-          />
-        </CenteredFill>
-      </Root>
+          </Text>
+          <View style={{ height: 16 }} />
+          <AppButton title="Tentar novamente" variant="ghost" onPress={() => poolRefresh()} />
+        </View>
+      </SafeAreaView>
     );
-  }
-
-  // ── Navigation handlers ──────────────────────────────────────────────────────
-
-  function handlePredictionsPress(match: Match) {
-    if (match.matchStatus === 'SCHEDULED') {
-      router.push(`/pool/${id}/predict?matchId=${match.id}`);
-    } else {
-      router.push(`/pool/${id}/match/${match.id}`);
-    }
   }
 
   async function handleStandingsRefresh() {
     await standingsRefresh();
-    if (showMemberFallback) {
-      await membersRefresh();
-    }
+    if (showMemberFallback) await membersRefresh();
   }
+
+  function handleLeave() {
+    Alert.alert(
+      'Sair do grupo',
+      'Tem certeza? Seu histórico de palpites será mantido.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Sair',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await leaveMutation.mutateAsync();
+              router.replace('/(tabs)');
+            } catch (e) {
+              Alert.alert('Erro', (e as Error).message);
+            }
+          },
+        },
+      ],
+    );
+  }
+
+  // ── Stats for hero ───────────────────────────────────────────────────────────
+
+  const statsGrid = [
+    {
+      label: 'SUA POS',
+      value: currentUserRank != null ? `#${currentUserRank}` : '—',
+      isPitch: true,
+    },
+    {
+      label: 'PONTOS',
+      value: String(currentUserEntry?.totalPoints ?? 0),
+      isPitch: false,
+    },
+    {
+      label: 'EXATOS',
+      value: String(currentUserEntry?.exactScoresCount ?? 0),
+      isPitch: false,
+    },
+  ];
 
   // ── Render ───────────────────────────────────────────────────────────────────
 
   return (
-    <Root>
-      {/* Header */}
-      <HeaderArea>
-        <HeaderRow>
-          <HeaderTitles>
-            <AppText bold size="lg" numberOfLines={1}>
-              {pool.name}
-            </AppText>
-            <AppSpacer verticalSpace="xsm" />
-            <AppText size="sm" color={theme.colors.text_gray}>
-              {pool.participantsCount} participante
-              {pool.participantsCount !== 1 ? 's' : ''}
-            </AppText>
-            <AppText size="xsm" color={theme.colors.text_disabled}>
-              Palpites, ranking e calendário do grupo
-            </AppText>
-            {pool.registrationDeadline != null && (
-              <AppText size="xsm" color={theme.colors.text_disabled}>
-                Inscrições até {formatDeadline(pool.registrationDeadline)}
-              </AppText>
-            )}
-          </HeaderTitles>
+    <SafeAreaView style={[s.root, { backgroundColor: theme.colors.background }]}>
+      {/* Hero header */}
+      <View style={s.hero}>
+        {/* Subtle top accent */}
+        <View style={s.heroAccent} />
 
+        {/* Nav row */}
+        <View style={s.navRow}>
+          <Pressable
+            onPress={() => router.back()}
+            style={[s.navBtn, { backgroundColor: theme.colors.ink800 }]}
+          >
+            <Ionicons name="chevron-back" size={18} color={theme.colors.ink300} />
+          </Pressable>
+          <View style={{ flex: 1 }} />
           {pool.isCreator && (
-            <SettingsButton
+            <Pressable
               onPress={() => router.push(`/pool/${id}/settings`)}
-              accessibilityLabel="Configurações do grupo"
+              style={[s.navBtn, { backgroundColor: theme.colors.ink800 }]}
             >
-              <Ionicons
-                name="settings-outline"
-                size={IconSizes.md}
-                color={theme.colors.text_gray}
-              />
-            </SettingsButton>
+              <Ionicons name="settings-outline" size={16} color={theme.colors.ink300} />
+            </Pressable>
           )}
-        </HeaderRow>
-      </HeaderArea>
+        </View>
 
-      {/* Main tab selector */}
-      <SegmentedControl
-        segments={MAIN_TABS}
-        selected={activeTab}
-        onChange={setActiveTab}
-      />
+        {/* Eyebrow */}
+        <Text style={[s.heroEyebrow, { color: theme.colors.ink500 }]}>
+          {pool.participantsCount} PARTICIPANTES · {pool.isCreator ? 'ADMIN' : 'MEMBRO'}
+        </Text>
 
-      {/* Predictions tab */}
-      {activeTab === 'predictions' && (
-        <PredictionMatchPanel
-          matches={matches ?? []}
-          isFetching={matchesFetching}
-          refetch={matchesRefetch}
-          predictionMap={predictionMap}
-          onMatchPress={handlePredictionsPress}
-          mode={predictionFilterMode}
-          selectedChip={predictionSelectedChip}
-          selectedDate={predictionSelectedDate}
-          onModeChange={setPredictionFilterMode}
-          onChipChange={setPredictionSelectedChip}
-          onDateChange={setPredictionSelectedDate}
-        />
-      )}
+        {/* Pool name */}
+        <Text style={[s.heroTitle, { color: theme.colors.ink100 }]} numberOfLines={2}>
+          {pool.name}
+        </Text>
 
-      {/* Standings tab */}
+        {/* Stats grid */}
+        <View style={s.statsGrid}>
+          {statsGrid.map((item) => (
+            <View
+              key={item.label}
+              style={[
+                s.statTile,
+                item.isPitch
+                  ? { backgroundColor: theme.colors.pitch }
+                  : { backgroundColor: theme.colors.ink850, borderWidth: 1, borderColor: theme.colors.ink800 },
+              ]}
+            >
+              <Text
+                style={[
+                  s.statLabel,
+                  { color: item.isPitch ? theme.colors.pitchInk : theme.colors.ink500 },
+                ]}
+              >
+                {item.label}
+              </Text>
+              <Text
+                style={[
+                  s.statValue,
+                  { color: item.isPitch ? theme.colors.pitchInk : theme.colors.ink100 },
+                ]}
+              >
+                {item.value}
+              </Text>
+            </View>
+          ))}
+        </View>
+      </View>
+
+      {/* Tab bar */}
+      <TabBar active={activeTab} onChange={setActiveTab} />
+
+      {/* ── Standings ── */}
       {activeTab === 'standings' && (
         <FlatList<LeaderboardEntry>
           data={rankingEntries}
@@ -819,108 +499,246 @@ export default function PoolDetailsScreen() {
             <RefreshControl
               refreshing={standingsLoading || (showMemberFallback && membersLoading)}
               onRefresh={handleStandingsRefresh}
-              colors={[theme.colors.primary]}
-              tintColor={theme.colors.primary}
+              tintColor={theme.colors.pitch}
             />
           }
           ListHeaderComponent={
             <>
-              <RankingSummary>
-                {rankingSummary.map((item) => (
-                  <SummaryItem key={item.label}>
-                    <SummaryValueRow>
-                      <AppText
-                        bold
-                        size="lg"
-                        color={theme.colors.white}
-                        align="center"
-                        style={{ fontFamily: theme.fonts.display, fontVariant: ['tabular-nums'] }}
-                      >
-                        {item.value}
-                      </AppText>
-                    </SummaryValueRow>
-                    <AppText bold size="xsm" color={theme.colors.white} align="center">
-                      {item.label}
-                    </AppText>
-                  </SummaryItem>
-                ))}
-              </RankingSummary>
-              {lastUpdatedMinutes != null ? (
-                <ListHeaderText>
-                  <AppText size="xsm" color={theme.colors.text_disabled} align="right">
-                    Atualizado há {lastUpdatedMinutes} min
-                  </AppText>
-                </ListHeaderText>
-              ) : showMemberFallback ? (
-                <ListHeaderText>
-                  <AppText size="xsm" color={theme.colors.text_disabled} align="right">
-                    Participantes aguardando o primeiro ranking
-                  </AppText>
-                </ListHeaderText>
-              ) : null}
-              {rankingEntries.length > 0 && (
-                <StandingsTableHeader>
-                  <RankHeaderCell />
-                  <NameHeaderCell>
-                    <AppText bold size="xsm" color={theme.colors.text_gray}>
-                      Participante
-                    </AppText>
-                  </NameHeaderCell>
-                  <PointsHeaderCell>
-                    <AppText bold size="xsm" color={theme.colors.text_gray} align="right">
-                      Pts
-                    </AppText>
-                  </PointsHeaderCell>
-                  <StatsHeaderCell>
-                    <StatHeaderItem>
-                      <AppText bold size="xsm" color={theme.colors.text_gray} align="right">
-                        Exatos
-                      </AppText>
-                    </StatHeaderItem>
-                  </StatsHeaderCell>
-                </StandingsTableHeader>
+              {lastUpdatedMinutes != null && (
+                <Text style={[s.updatedTxt, { color: theme.colors.ink500 }]}>
+                  Atualizado há {lastUpdatedMinutes} min
+                </Text>
               )}
+              {showMemberFallback && (
+                <Text style={[s.updatedTxt, { color: theme.colors.ink500 }]}>
+                  Aguardando primeiro ranking
+                </Text>
+              )}
+              <LeaderboardHeader />
             </>
           }
           ListEmptyComponent={
-            <CenteredFill>
-              <AppText size="sm" color={theme.colors.text_gray} align="center">
-                {membersLoading
-                  ? 'Carregando participantes...'
-                  : membersError ?? 'Nenhum participante ainda'}
-              </AppText>
-            </CenteredFill>
+            <View style={s.centered}>
+              <Text style={[s.emptyTxt, { color: theme.colors.ink500 }]}>
+                {membersLoading ? 'Carregando...' : membersError ?? 'Nenhum participante ainda'}
+              </Text>
+            </View>
           }
           ListFooterComponent={
-            <StandingsFooter>
+            <View style={s.standingsFooter}>
               <AppButton
-                title="Meus Palpites"
-                variant="positive"
+                title="Ver palpites"
+                variant="secondary"
                 onPress={() => setActiveTab('predictions')}
               />
-            </StandingsFooter>
+            </View>
           }
           contentContainerStyle={{ flexGrow: 1 }}
-          renderItem={({ item: entry, index }) => (
+          renderItem={({ item, index }) => (
             <LeaderboardRow
-              entry={entry}
-              rank={entry.rank ?? (showMemberFallback ? null : index + 1)}
-              isCurrentUser={entry.userId === apiUser?.id}
+              entry={item}
+              rank={item.rank ?? (showMemberFallback ? null : index + 1)}
+              isCurrentUser={item.userId === apiUser?.id}
             />
           )}
         />
       )}
 
-      {/* Info tab */}
-      {activeTab === 'info' && (
-        <PoolInfoPanel
-          pool={pool}
-          members={members}
-          currentUserId={apiUser?.id}
-          onMemberRemoved={membersRefresh}
-          onLeavePool={() => router.replace('/(tabs)')}
+      {/* ── Predictions ── */}
+      {activeTab === 'predictions' && (
+        <PredictionMatchPanel
+          matches={matches ?? []}
+          isFetching={matchesFetching}
+          refetch={matchesRefetch}
+          predictionMap={predictionMap}
+          poolId={poolId ?? 0}
+          mode={predFilterMode}
+          selectedChip={predChip}
+          selectedDate={predDate}
+          onModeChange={setPredFilterMode}
+          onChipChange={setPredChip}
+          onDateChange={setPredDate}
         />
       )}
-    </Root>
+
+      {/* ── Grupo (group stage matches, global mode) ── */}
+      {activeTab === 'info' && (
+        <SectionList
+          sections={groupSections}
+          keyExtractor={(item) => String(item.id)}
+          contentContainerStyle={s.listContent}
+          stickySectionHeadersEnabled
+          refreshControl={
+            <RefreshControl
+              refreshing={matchesFetching}
+              onRefresh={matchesRefetch}
+              tintColor={theme.colors.pitch}
+            />
+          }
+          ListEmptyComponent={
+            <View style={s.centered}>
+              <Text style={[s.emptyTxt, { color: theme.colors.ink500 }]}>
+                Sem partidas de grupo ainda
+              </Text>
+            </View>
+          }
+          ListFooterComponent={
+            !pool.isCreator ? (
+              <View style={s.standingsFooter}>
+                <AppButton
+                  title="Sair do grupo"
+                  variant="destructive"
+                  isLoading={leaveMutation.isPending}
+                  onPress={handleLeave}
+                />
+              </View>
+            ) : null
+          }
+          renderSectionHeader={({ section }) => (
+            <View
+              style={[s.sectionHeader, { backgroundColor: theme.colors.background }]}
+            >
+              <Text style={[s.sectionTitle, { color: theme.colors.ink500 }]}>
+                {section.title.toUpperCase()}
+              </Text>
+              <View style={[s.sectionLine, { backgroundColor: theme.colors.ink800 }]} />
+            </View>
+          )}
+          renderItem={({ item }) => (
+            <MatchCard match={item} />
+          )}
+        />
+      )}
+    </SafeAreaView>
   );
 }
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
+const s = StyleSheet.create({
+  root: { flex: 1 },
+  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
+  emptyTxt: {
+    fontFamily: TypographyFamilies.sans,
+    fontSize: 14,
+    textAlign: 'center',
+    includeFontPadding: false,
+  },
+
+  // Hero
+  hero: {
+    paddingTop: 60,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    overflow: 'hidden',
+  },
+  heroAccent: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0,
+    height: 120,
+    backgroundColor: 'rgba(200,255,62,0.04)',
+  },
+  navRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  navBtn: {
+    width: 32, height: 32, borderRadius: 16,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  heroEyebrow: {
+    fontFamily: TypographyFamilies.mono,
+    fontSize: 10,
+    letterSpacing: 1,
+    includeFontPadding: false,
+    marginBottom: 6,
+  },
+  heroTitle: {
+    fontFamily: TypographyFamilies.display,
+    fontSize: 34,
+    letterSpacing: -0.95,
+    lineHeight: 38,
+    includeFontPadding: false,
+    marginBottom: 20,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  statTile: {
+    flex: 1,
+    borderRadius: 14,
+    padding: 14,
+  },
+  statLabel: {
+    fontFamily: TypographyFamilies.mono,
+    fontSize: 9,
+    letterSpacing: 0.5,
+    includeFontPadding: false,
+    marginBottom: 4,
+  },
+  statValue: {
+    fontFamily: TypographyFamilies.display,
+    fontSize: 36,
+    letterSpacing: -1.26,
+    includeFontPadding: false,
+    lineHeight: 38,
+  },
+
+  // Tabs
+  tabBar: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    paddingHorizontal: 20,
+  },
+  tabItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+    marginRight: 20,
+    alignItems: 'center',
+  },
+  tabLabel: {
+    fontFamily: TypographyFamilies.sans,
+    fontSize: 14,
+    includeFontPadding: false,
+  },
+  tabLabelActive: {
+    fontFamily: TypographyFamilies.sansSemi,
+  },
+  tabUnderline: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 2,
+    borderRadius: 1,
+  },
+
+  // Lists
+  listContent: { flexGrow: 1, paddingBottom: 32 },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  sectionTitle: {
+    fontFamily: TypographyFamilies.mono,
+    fontSize: 10,
+    letterSpacing: 0.8,
+    includeFontPadding: false,
+  },
+  sectionLine: { flex: 1, height: 1 },
+  standingsFooter: { padding: 20 },
+  updatedTxt: {
+    fontFamily: TypographyFamilies.mono,
+    fontSize: 10,
+    textAlign: 'right',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    includeFontPadding: false,
+  },
+});

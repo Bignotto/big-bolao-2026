@@ -17,8 +17,19 @@ type PoolMemberResponseItem = PoolMember | { user: PoolMember };
 
 function normalizeMember(item: PoolMemberResponseItem): PoolMember {
   const user = 'user' in item ? item.user : item;
+  const raw = item as Record<string, unknown>;
+
+  // The API can return the user UUID in several places depending on the endpoint shape:
+  // flat: { id, ... } | wrapped: { userId, user: { fullName, ... } (no id inside) }
+  const id =
+    (user.id || undefined) ??
+    (typeof raw.userId === 'string' ? raw.userId : undefined) ??
+    (typeof raw.id === 'string' ? raw.id : undefined) ??
+    '';
+
   return {
     ...user,
+    id,
     profileImageUrl:
       user.profileImageUrl ?? user.avatarUrl ?? user.photoUrl ?? user.picture ?? null,
   };

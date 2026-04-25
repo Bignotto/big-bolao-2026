@@ -37,3 +37,12 @@ export const IconSizes: { [size: string]: number } = {
   sm: 16,
   xsm: 8,
 };
+
+export const TypographyFamilies = {
+  display: 'BricolageGrotesque-Bold',
+  displayItalic: 'BricolageGrotesque-SemiBoldItalic',
+  sans: 'Geist-Regular',
+  sansMedium: 'Geist-Medium',
+  sansSemi: 'Geist-SemiBold',
+  mono: 'GeistMono-Medium',
+} as const;

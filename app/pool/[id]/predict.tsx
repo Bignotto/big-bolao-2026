@@ -1,7 +1,18 @@
 import React, { useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, SafeAreaView } from 'react-native';
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  Pressable,
+  ScrollView,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import styled, { useTheme, type DefaultTheme } from 'styled-components/native';
+import { useTheme } from 'styled-components/native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 import { useMatch } from '@/hooks/useMatch';
 import { usePool } from '@/hooks/usePool';
@@ -10,18 +21,18 @@ import { useUpsertPrediction } from '@/hooks/useUpsertPrediction';
 import { useSession } from '@/context/SessionContext';
 import { isMatchLocked } from '@/domain/entities/Match';
 import type { MatchStage } from '@/domain/entities/Match';
+import { MatchStatus } from '@/domain/enums/MatchStatus';
 import type { PredictionPayload } from '@/domain/entities/Prediction';
 
-import AppText from '@/components/AppComponents/AppText';
 import AppButton from '@/components/AppComponents/AppButton';
-import AppSpacer from '@/components/AppComponents/AppSpacer';
-import ScoreInput from '@/components/AppComponents/ScoreInput';
-import { TeamFlag } from '@/components/matches/TeamFlag';
-import { BorderRadius, Spaces } from '@/constants/tokens';
+import ScoreStepper from '@/components/AppComponents/ScoreStepper';
+import { TypographyFamilies } from '@/constants/tokens';
+
+// ─── Labels ───────────────────────────────────────────────────────────────────
 
 const STAGE_LABELS: Record<MatchStage, string> = {
-  GROUP: 'Fase de Grupos',
-  ROUND_OF_32: 'Dezesseis avos',
+  GROUP: 'Grupo',
+  ROUND_OF_32: 'Dezesseis Avos',
   ROUND_OF_16: 'Oitavas de Final',
   QUARTER_FINAL: 'Quartas de Final',
   SEMI_FINAL: 'Semifinal',
@@ -30,127 +41,97 @@ const STAGE_LABELS: Record<MatchStage, string> = {
   FINAL: 'Final',
 };
 
-function formatMatchDatetime(iso: string): string {
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+type MatchAny = { stage: MatchStage; group?: string | null; round?: number | null };
+
+function stageEyebrow(m: MatchAny): string {
+  if (m.stage === 'GROUP') {
+    const g = m.group ? `GRUPO ${m.group}` : 'GRUPO';
+    const r = m.round ? ` · RODADA ${m.round}` : '';
+    return `${g}${r}`;
+  }
+  return STAGE_LABELS[m.stage].toUpperCase();
+}
+
+function formatDateLine(iso: string, stadium: string | null): string {
   const date = new Date(iso);
-  const timeZone = 'America/Sao_Paulo';
-  const datePart = new Intl.DateTimeFormat('pt-BR', {
-    weekday: 'short',
-    day: '2-digit',
-    month: 'short',
-    timeZone,
+  const tz = 'America/Sao_Paulo';
+  const wday = new Intl.DateTimeFormat('pt-BR', { weekday: 'short', timeZone: tz })
+    .format(date).replace('.', '');
+  const day = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', timeZone: tz }).format(date);
+  const mon = new Intl.DateTimeFormat('pt-BR', { month: 'short', timeZone: tz })
+    .format(date).replace('.', '');
+  const time = new Intl.DateTimeFormat('pt-BR', {
+    hour: '2-digit', minute: '2-digit', hour12: false, timeZone: tz,
   }).format(date);
-  const timePart = new Intl.DateTimeFormat('pt-BR', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-    timeZone,
-  }).format(date);
-  const cleaned = datePart.replace(/\.$/, '').replace(/^\w/, (c) => c.toUpperCase());
-  return `${cleaned} - ${timePart}`;
+  const w = wday.charAt(0).toUpperCase() + wday.slice(1);
+  return `${w}, ${day} ${mon} · ${time}${stadium ? ` · ${stadium}` : ''}`;
 }
 
-function normalizeScoreInput(value: string): string {
-  return value.replace(/\D/g, '').slice(0, 2);
+function formatKickoffTime(iso: string): string {
+  return new Date(iso).toLocaleTimeString('pt-BR', {
+    hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'America/Sao_Paulo',
+  });
 }
 
-function nextScoreValue(value: string, delta: 1 | -1): string {
-  const current = value.trim() === '' ? 0 : Number(value);
-  return String(Math.max(0, Math.min(99, current + delta)));
+type Rules = {
+  exactScorePoints: number;
+  correctWinnerGoalDiffPoints: number;
+  correctWinnerPoints: number;
+  correctDrawPoints: number;
+};
+
+function getInterpretation(
+  homeScore: number,
+  awayScore: number,
+  homeName: string,
+  awayName: string,
+  rules: Rules | null | undefined,
+) {
+  if (homeScore === awayScore) {
+    return {
+      outcome: `Empate · ${homeScore}–${awayScore}`,
+      detail: rules
+        ? `Placar exato = ${rules.exactScorePoints} pts · empate correto = ${rules.correctDrawPoints} pts`
+        : '',
+    };
+  }
+  const winner = homeScore > awayScore ? homeName : awayName;
+  const diff = Math.abs(homeScore - awayScore);
+  return {
+    outcome: `Vitória de ${winner} · saldo ${diff}`,
+    detail: rules
+      ? `Placar exato = ${rules.exactScorePoints} pts · vencedor + saldo = ${rules.correctWinnerGoalDiffPoints} pts`
+      : '',
+  };
 }
 
-const Root = styled(SafeAreaView)`
-  flex: 1;
-  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.background};
-`;
+// ─── Flag ─────────────────────────────────────────────────────────────────────
 
-const CenteredFill = styled.View`
-  flex: 1;
-  align-items: center;
-  justify-content: center;
-  padding-horizontal: ${Spaces.md}px;
-`;
+function Flag({ flagUrl, countryCode }: { flagUrl: string | null; countryCode: string | null }) {
+  const [failed, setFailed] = useState(false);
+  if (flagUrl && !failed) {
+    return (
+      <Image
+        source={{ uri: flagUrl }}
+        style={s.flag}
+        resizeMode="cover"
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+  return (
+    <View style={[s.flag, s.flagFallback]}>
+      <Text style={s.flagFallbackTxt}>{countryCode?.slice(0, 2) ?? '?'}</Text>
+    </View>
+  );
+}
 
-const PoolBanner = styled.View`
-  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.primary};
-  border-radius: ${BorderRadius.sm}px;
-  padding: ${Spaces.sm}px ${Spaces.md}px;
-  margin: ${Spaces.lg}px ${Spaces.md}px 0;
-`;
-
-const MatchInfoCard = styled.View`
-  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.white};
-  border-radius: ${BorderRadius.sm}px;
-  padding: ${Spaces.lg}px ${Spaces.md}px;
-  margin: ${Spaces.md}px ${Spaces.md}px;
-  border-width: 1px;
-  border-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.shape};
-`;
-
-const MatchMeta = styled.View`
-  align-items: center;
-`;
-
-const TeamsRow = styled.View`
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: ${Spaces.lg}px;
-`;
-
-const TeamBlock = styled.View`
-  flex: 1;
-  align-items: center;
-`;
-
-const VersusBlock = styled.View`
-  width: 56px;
-  align-items: center;
-`;
-
-const DetailsRow = styled.View`
-  flex-direction: row;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: ${Spaces.xsm}px;
-  margin-top: ${Spaces.md}px;
-`;
-
-const DetailPill = styled.View`
-  border-radius: ${BorderRadius.sm}px;
-  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.shape_light};
-  padding: ${Spaces.xsm}px ${Spaces.sm}px;
-`;
-
-const Section = styled.View`
-  padding-horizontal: ${Spaces.md}px;
-`;
-
-const RulesCard = styled.View`
-  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.white};
-  border-radius: ${BorderRadius.sm}px;
-  padding: ${Spaces.md}px;
-  border-width: 1px;
-  border-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.shape};
-`;
-
-const RuleRow = styled.View`
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  padding-vertical: ${Spaces.xsm}px;
-`;
-
-const SubmitArea = styled.View`
-  padding-horizontal: ${Spaces.md}px;
-  padding-bottom: ${Spaces.lg}px;
-`;
+// ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function PredictScreen() {
-  const { id, matchId: matchIdParam } = useLocalSearchParams<{
-    id: string;
-    matchId: string;
-  }>();
-
+  const { id, matchId: matchIdParam } = useLocalSearchParams<{ id: string; matchId: string }>();
   const poolId = id ? Number(id) : undefined;
   const matchId = matchIdParam ? Number(matchIdParam) : undefined;
 
@@ -167,16 +148,17 @@ export default function PredictScreen() {
   );
 
   const existingPrediction = predictions?.[0] ?? null;
-  const [homeValue, setHomeValue] = useState('0');
-  const [awayValue, setAwayValue] = useState('0');
+  const [homeScore, setHomeScore] = useState(0);
+  const [awayScore, setAwayScore] = useState(0);
+  const [rulesOpen, setRulesOpen] = useState(true);
 
   React.useEffect(() => {
     if (existingPrediction) {
-      setHomeValue(String(existingPrediction.predictedHomeScore));
-      setAwayValue(String(existingPrediction.predictedAwayScore));
+      setHomeScore(existingPrediction.predictedHomeScore);
+      setAwayScore(existingPrediction.predictedAwayScore);
     } else {
-      setHomeValue('0');
-      setAwayValue('0');
+      setHomeScore(0);
+      setAwayScore(0);
     }
   }, [
     matchId,
@@ -189,71 +171,55 @@ export default function PredictScreen() {
 
   if (matchLoading || poolLoading || predsLoading) {
     return (
-      <Root>
-        <CenteredFill>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
-        </CenteredFill>
-      </Root>
+      <SafeAreaView style={[s.root, { backgroundColor: theme.colors.background }]}>
+        <View style={s.centered}>
+          <ActivityIndicator size="large" color={theme.colors.pitch} />
+        </View>
+      </SafeAreaView>
     );
   }
 
   if (!match || !pool) {
     return (
-      <Root>
-        <CenteredFill>
-          <AppText size="sm" color={theme.colors.text_gray} align="center">
+      <SafeAreaView style={[s.root, { backgroundColor: theme.colors.background }]}>
+        <View style={s.centered}>
+          <Text style={[s.errorTxt, { color: theme.colors.ink400 }]}>
             Não foi possível carregar os dados da partida.
-          </AppText>
-        </CenteredFill>
-      </Root>
+          </Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
   const locked = isMatchLocked(match);
+  const isDone = match.matchStatus === MatchStatus.COMPLETED;
   const rules = pool.scoringRules;
-  const stageLabel = STAGE_LABELS[match.stage] ?? match.stage.replace(/_/g, ' ');
-  const groupLabel = match.stage === 'GROUP' && match.group ? `Grupo ${match.group}` : null;
-  const stadiumLabel = match.stadium ?? 'Estádio a definir';
+  const matchAny = match as typeof match & { round?: number | null };
 
-  const canSubmit =
-    !locked &&
-    homeValue.trim().length > 0 &&
-    awayValue.trim().length > 0 &&
-    /^\d{1,2}$/.test(homeValue.trim()) &&
-    /^\d{1,2}$/.test(awayValue.trim()) &&
-    !mutation.isPending;
-
-  function handleHomeChange(value: string) {
-    setHomeValue(normalizeScoreInput(value));
-  }
-
-  function handleAwayChange(value: string) {
-    setAwayValue(normalizeScoreInput(value));
-  }
+  const interpretation = getInterpretation(
+    homeScore,
+    awayScore,
+    match.homeTeam.countryCode ?? match.homeTeam.name,
+    match.awayTeam.countryCode ?? match.awayTeam.name,
+    rules,
+  );
 
   function handleSubmit() {
     if (locked) {
       Alert.alert('Palpites encerrados', 'Este jogo já começou.');
       return;
     }
-
-    if (!canSubmit) {
-      Alert.alert('Palpite inválido', 'Informe placares entre 0 e 99 para os dois times.');
-      return;
-    }
-
     const payload: PredictionPayload = {
       poolId: poolId!,
       matchId: matchId!,
-      predictedHomeScore: Number(homeValue),
-      predictedAwayScore: Number(awayValue),
+      predictedHomeScore: homeScore,
+      predictedAwayScore: awayScore,
       predictedHasExtraTime: false,
       predictedHasPenalties: false,
       predictedPenaltyHomeScore: null,
       predictedPenaltyAwayScore: null,
       predictionId: existingPrediction?.id,
     };
-
     mutation.mutate(payload, {
       onSuccess: () => router.back(),
       onError: (err) => Alert.alert('Erro', (err as Error).message),
@@ -261,197 +227,338 @@ export default function PredictScreen() {
   }
 
   return (
-    <Root>
+    <SafeAreaView style={[s.root, { backgroundColor: theme.colors.background }]}>
+      {/* Top bar */}
+      <View style={s.topBar}>
+        <Pressable
+          onPress={() => router.back()}
+          style={[s.closeBtn, { backgroundColor: theme.colors.ink800 }]}
+        >
+          <Ionicons name="close" size={16} color={theme.colors.ink300} />
+        </Pressable>
+        <Text style={[s.poolEyebrow, { color: theme.colors.ink500 }]} numberOfLines={1}>
+          {pool.name.toUpperCase()}
+        </Text>
+        <View style={{ width: 32 }} />
+      </View>
+
       <ScrollView
-        contentContainerStyle={{ paddingBottom: Spaces.lg }}
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 24 }}
         keyboardShouldPersistTaps="handled"
       >
-        <PoolBanner>
-          <AppText size="xsm" color={theme.colors.primary_light} align="center">
-            Você está apostando no bolão
-          </AppText>
-          <AppSpacer verticalSpace="xsm" />
-          <AppText size="md" bold color={theme.colors.white} align="center">
-            {pool.name}
-          </AppText>
-        </PoolBanner>
+        {/* Eyebrows */}
+        <View style={s.eyebrowArea}>
+          <Text style={[s.stageEyebrow, { color: theme.colors.pitch }]}>
+            {stageEyebrow({ stage: match.stage, group: (match as any).group, round: matchAny.round })}
+          </Text>
+          <Text style={[s.dateLine, { color: theme.colors.ink400 }]}>
+            {formatDateLine(match.matchDatetime, match.stadium ?? null)}
+          </Text>
+        </View>
 
-        <MatchInfoCard>
-          <MatchMeta>
-            <AppText size="xsm" bold color={theme.colors.primary} align="center">
-              {stageLabel.toUpperCase()}
-            </AppText>
-            <AppSpacer verticalSpace="xsm" />
-            <AppText size="sm" color={theme.colors.text_gray} align="center">
-              {formatMatchDatetime(match.matchDatetime)}
-            </AppText>
-          </MatchMeta>
+        {/* Teams + Steppers */}
+        <View style={s.stepperSection}>
+          <View style={s.teamCol}>
+            <Flag flagUrl={match.homeTeam.flagUrl} countryCode={match.homeTeam.countryCode} />
+            <Text style={[s.teamName, { color: theme.colors.ink100 }]}>
+              {match.homeTeam.countryCode ?? match.homeTeam.name}
+            </Text>
+            <View style={{ height: 16 }} />
+            <ScoreStepper value={homeScore} onChange={setHomeScore} accent disabled={locked} />
+          </View>
 
-          <TeamsRow>
-            <TeamBlock>
-              <TeamFlag
-                flagUrl={match.homeTeam.flagUrl}
-                teamName={match.homeTeam.name}
-                size="lg"
-              />
-              <AppSpacer verticalSpace="sm" />
-              <AppText size="md" bold align="center">
-                {match.homeTeam.countryCode ?? match.homeTeam.name}
-              </AppText>
-              <AppText size="xsm" color={theme.colors.text_gray} align="center">
-                {match.homeTeam.name}
-              </AppText>
-            </TeamBlock>
+          <View style={s.vsCol}>
+            <Text style={[s.vsTxt, { color: theme.colors.ink600 }]}>VS</Text>
+          </View>
 
-            <VersusBlock>
-              <AppText size="lg" bold color={theme.colors.text_disabled} align="center">
-                x
-              </AppText>
-            </VersusBlock>
+          <View style={s.teamCol}>
+            <Flag flagUrl={match.awayTeam.flagUrl} countryCode={match.awayTeam.countryCode} />
+            <Text style={[s.teamName, { color: theme.colors.ink100 }]}>
+              {match.awayTeam.countryCode ?? match.awayTeam.name}
+            </Text>
+            <View style={{ height: 16 }} />
+            <ScoreStepper value={awayScore} onChange={setAwayScore} accent disabled={locked} />
+          </View>
+        </View>
 
-            <TeamBlock>
-              <TeamFlag
-                flagUrl={match.awayTeam.flagUrl}
-                teamName={match.awayTeam.name}
-                size="lg"
-              />
-              <AppSpacer verticalSpace="sm" />
-              <AppText size="md" bold align="center">
-                {match.awayTeam.countryCode ?? match.awayTeam.name}
-              </AppText>
-              <AppText size="xsm" color={theme.colors.text_gray} align="center">
-                {match.awayTeam.name}
-              </AppText>
-            </TeamBlock>
-          </TeamsRow>
-
-          <DetailsRow>
-            {groupLabel && (
-              <DetailPill>
-                <AppText size="xsm" color={theme.colors.text_gray}>
-                  {groupLabel}
-                </AppText>
-              </DetailPill>
-            )}
-            <DetailPill>
-              <AppText size="xsm" color={theme.colors.text_gray}>
-                {stadiumLabel}
-              </AppText>
-            </DetailPill>
-          </DetailsRow>
-        </MatchInfoCard>
-
-        <ScoreInput
-          homeTeamName={match.homeTeam.name}
-          awayTeamName={match.awayTeam.name}
-          homeValue={homeValue}
-          awayValue={awayValue}
-          onHomeChange={handleHomeChange}
-          onAwayChange={handleAwayChange}
-          onHomeIncrement={() => setHomeValue((value) => nextScoreValue(value, 1))}
-          onHomeDecrement={() => setHomeValue((value) => nextScoreValue(value, -1))}
-          onAwayIncrement={() => setAwayValue((value) => nextScoreValue(value, 1))}
-          onAwayDecrement={() => setAwayValue((value) => nextScoreValue(value, -1))}
-          locked={locked}
-        />
-
-        <AppSpacer verticalSpace="lg" />
-
-        {locked && (
-          <Section>
-            <AppText size="sm" color={theme.colors.text_gray} align="center">
-              Este jogo já começou. Palpites encerrados.
-            </AppText>
-          </Section>
+        {/* Interpretation card */}
+        {!locked && (
+          <View style={s.section}>
+            <View style={[s.interpCard, { borderColor: theme.colors.ink700, backgroundColor: 'rgba(200,255,62,0.07)' }]}>
+              <View style={s.interpRow}>
+                <Ionicons name="checkmark-circle" size={16} color={theme.colors.pitch} />
+                <Text style={[s.interpOutcome, { color: theme.colors.pitch }]}>
+                  {interpretation.outcome}
+                </Text>
+              </View>
+              {!!interpretation.detail && (
+                <Text style={[s.interpDetail, { color: theme.colors.ink400 }]}>
+                  {interpretation.detail}
+                </Text>
+              )}
+            </View>
+          </View>
         )}
 
-        {rules && (
-          <>
-            <AppSpacer verticalSpace="md" />
-            <Section>
-              <AppText
-                size="sm"
-                bold
-                color={theme.colors.text_gray}
-                style={{ marginBottom: Spaces.xsm }}
+        {/* Result card (COMPLETED) */}
+        {isDone && existingPrediction && (
+          <View style={s.section}>
+            <View style={[s.interpCard, { borderColor: 'rgba(200,255,62,0.3)', backgroundColor: 'rgba(200,255,62,0.07)' }]}>
+              <Text style={[s.interpOutcome, { color: theme.colors.pitch }]}>
+                Resultado: {match.homeTeamScore}–{match.awayTeamScore}
+              </Text>
+              <Text style={[s.interpDetail, { color: theme.colors.ink400 }]}>
+                Você marcou {existingPrediction.pointsEarned ?? 0} pts · palpite {existingPrediction.predictedHomeScore}–{existingPrediction.predictedAwayScore}
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* COMO PONTUA collapsible — hidden when locked */}
+        {!locked && rules && (
+          <View style={s.section}>
+            <Pressable
+              onPress={() => setRulesOpen(!rulesOpen)}
+              style={[
+                s.rulesHeader,
+                {
+                  backgroundColor: theme.colors.ink900,
+                  borderColor: theme.colors.ink800,
+                  borderBottomLeftRadius: rulesOpen ? 0 : 14,
+                  borderBottomRightRadius: rulesOpen ? 0 : 14,
+                },
+              ]}
+            >
+              <Text style={[s.rulesTitle, { color: theme.colors.ink500 }]}>COMO PONTUA</Text>
+              <Ionicons
+                name={rulesOpen ? 'chevron-up' : 'chevron-down'}
+                size={14}
+                color={theme.colors.ink500}
+              />
+            </Pressable>
+            {rulesOpen && (
+              <View
+                style={[
+                  s.rulesBody,
+                  { backgroundColor: theme.colors.ink900, borderColor: theme.colors.ink800 },
+                ]}
               >
-                Como os pontos funcionam
-              </AppText>
-              <RulesCard>
-                <RuleRow>
-                  <AppText size="xsm" color={theme.colors.text_gray}>
-                    Placar exato
-                  </AppText>
-                  <AppText size="xsm" bold>
-                    {rules.exactScorePoints} pts
-                  </AppText>
-                </RuleRow>
-                <RuleRow>
-                  <AppText size="xsm" color={theme.colors.text_gray}>
-                    Vencedor + saldo
-                  </AppText>
-                  <AppText size="xsm" bold>
-                    {rules.correctWinnerGoalDiffPoints} pts
-                  </AppText>
-                </RuleRow>
-                <RuleRow>
-                  <AppText size="xsm" color={theme.colors.text_gray}>
-                    Vencedor
-                  </AppText>
-                  <AppText size="xsm" bold>
-                    {rules.correctWinnerPoints} pts
-                  </AppText>
-                </RuleRow>
-                <RuleRow>
-                  <AppText size="xsm" color={theme.colors.text_gray}>
-                    Empate
-                  </AppText>
-                  <AppText size="xsm" bold>
-                    {rules.correctDrawPoints} pts
-                  </AppText>
-                </RuleRow>
-                <RuleRow>
-                  <AppText size="xsm" color={theme.colors.text_gray}>
-                    Multiplicador eliminatórias
-                  </AppText>
-                  <AppText size="xsm" bold>
-                    x{rules.knockoutMultiplier}
-                  </AppText>
-                </RuleRow>
-                <RuleRow>
-                  <AppText size="xsm" color={theme.colors.text_gray}>
-                    Multiplicador final
-                  </AppText>
-                  <AppText size="xsm" bold>
-                    x{rules.finalMultiplier}
-                  </AppText>
-                </RuleRow>
-              </RulesCard>
-            </Section>
-          </>
+                <View style={s.rulesGrid}>
+                  {[
+                    { label: 'Placar exato', pts: rules.exactScorePoints },
+                    { label: 'Vencedor + saldo', pts: rules.correctWinnerGoalDiffPoints },
+                    { label: 'Vencedor', pts: rules.correctWinnerPoints },
+                    { label: 'Empate', pts: rules.correctDrawPoints },
+                  ].map((item) => (
+                    <View key={item.label} style={s.rulesCell}>
+                      <Text style={[s.rulesCellLabel, { color: theme.colors.ink400 }]}>
+                        {item.label}
+                      </Text>
+                      <Text style={[s.rulesCellValue, { color: theme.colors.ink100 }]}>
+                        {item.pts} pts
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+          </View>
         )}
-
-        <AppSpacer verticalSpace="lg" />
-
-        <SubmitArea>
-          {locked ? (
-            <AppButton
-              title="Ver partida"
-              variant="transparent"
-              onPress={() => router.back()}
-            />
-          ) : (
-            <AppButton
-              title={existingPrediction ? 'Atualizar palpite' : 'Salvar palpite'}
-              variant="solid"
-              isLoading={mutation.isPending}
-              disabled={!canSubmit}
-              onPress={handleSubmit}
-            />
-          )}
-        </SubmitArea>
       </ScrollView>
-    </Root>
+
+      {/* Sticky CTA */}
+      <View
+        style={[
+          s.cta,
+          { backgroundColor: theme.colors.background, borderTopColor: theme.colors.ink800 },
+        ]}
+      >
+        {locked ? (
+          <View
+            style={[
+              s.lockedBanner,
+              { backgroundColor: theme.colors.ink850, borderColor: theme.colors.ink800 },
+            ]}
+          >
+            <Ionicons name="lock-closed" size={14} color={theme.colors.ink500} />
+            <View style={{ flex: 1, marginLeft: 10 }}>
+              <Text style={[s.lockedTitle, { color: theme.colors.ink300 }]}>
+                Palpite travado em {formatKickoffTime(match.matchDatetime)}
+              </Text>
+              {existingPrediction && (
+                <Text style={[s.lockedSub, { color: theme.colors.ink500 }]}>
+                  Você palpitou {existingPrediction.predictedHomeScore}–{existingPrediction.predictedAwayScore}
+                </Text>
+              )}
+            </View>
+          </View>
+        ) : (
+          <AppButton
+            title={`${existingPrediction ? 'Atualizar' : 'Salvar'} palpite · ${homeScore}–${awayScore} →`}
+            variant="primary"
+            size="lg"
+            isLoading={mutation.isPending}
+            onPress={handleSubmit}
+          />
+        )}
+      </View>
+    </SafeAreaView>
   );
 }
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
+const s = StyleSheet.create({
+  root: { flex: 1 },
+  centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  errorTxt: { fontFamily: TypographyFamilies.sans, fontSize: 14, textAlign: 'center' },
+
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 12,
+  },
+  closeBtn: {
+    width: 32, height: 32, borderRadius: 16,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  poolEyebrow: {
+    fontFamily: TypographyFamilies.mono,
+    fontSize: 10,
+    letterSpacing: 1,
+    flex: 1,
+    textAlign: 'center',
+    includeFontPadding: false,
+  },
+
+  eyebrowArea: { paddingHorizontal: 20, paddingBottom: 20 },
+  stageEyebrow: {
+    fontFamily: TypographyFamilies.mono,
+    fontSize: 10,
+    letterSpacing: 1,
+    includeFontPadding: false,
+    marginBottom: 4,
+  },
+  dateLine: {
+    fontFamily: TypographyFamilies.sans,
+    fontSize: 13,
+    includeFontPadding: false,
+  },
+
+  stepperSection: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingHorizontal: 16,
+    marginBottom: 24,
+  },
+  teamCol: { flex: 1, alignItems: 'center' },
+  vsCol: {
+    width: 40,
+    alignItems: 'center',
+    paddingTop: 140,
+  },
+  vsTxt: {
+    fontFamily: TypographyFamilies.sansSemi,
+    fontSize: 13,
+    letterSpacing: 1,
+    includeFontPadding: false,
+  },
+  teamName: {
+    fontFamily: TypographyFamilies.sansSemi,
+    fontSize: 14,
+    marginTop: 8,
+    includeFontPadding: false,
+  },
+  flag: {
+    width: 48, height: 34, borderRadius: 3,
+    borderWidth: 0.5, borderColor: 'rgba(255,255,255,0.1)',
+  },
+  flagFallback: { backgroundColor: '#262E36', alignItems: 'center', justifyContent: 'center' },
+  flagFallbackTxt: { fontFamily: TypographyFamilies.mono, fontSize: 11, color: '#8A949E' },
+
+  section: { paddingHorizontal: 16, marginBottom: 12 },
+
+  interpCard: { borderRadius: 14, borderWidth: 1, padding: 14 },
+  interpRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
+  interpOutcome: {
+    fontFamily: TypographyFamilies.sansSemi,
+    fontSize: 14,
+    flex: 1,
+    includeFontPadding: false,
+  },
+  interpDetail: {
+    fontFamily: TypographyFamilies.mono,
+    fontSize: 11,
+    includeFontPadding: false,
+  },
+
+  rulesHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  rulesTitle: {
+    fontFamily: TypographyFamilies.mono,
+    fontSize: 10,
+    letterSpacing: 0.8,
+    includeFontPadding: false,
+  },
+  rulesBody: {
+    borderWidth: 1,
+    borderTopWidth: 0,
+    borderBottomLeftRadius: 14,
+    borderBottomRightRadius: 14,
+    padding: 16,
+  },
+  rulesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    rowGap: 14,
+    columnGap: 0,
+  },
+  rulesCell: { width: '50%' },
+  rulesCellLabel: {
+    fontFamily: TypographyFamilies.sans,
+    fontSize: 11,
+    includeFontPadding: false,
+    marginBottom: 2,
+  },
+  rulesCellValue: {
+    fontFamily: TypographyFamilies.display,
+    fontSize: 16,
+    includeFontPadding: false,
+  },
+
+  cta: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    paddingBottom: 28,
+    borderTopWidth: 1,
+  },
+  lockedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  lockedTitle: {
+    fontFamily: TypographyFamilies.sansMedium,
+    fontSize: 14,
+    includeFontPadding: false,
+  },
+  lockedSub: {
+    fontFamily: TypographyFamilies.mono,
+    fontSize: 12,
+    marginTop: 2,
+    includeFontPadding: false,
+  },
+});
