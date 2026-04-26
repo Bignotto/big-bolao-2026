@@ -1,24 +1,31 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, Switch } from 'react-native';
-import styled from 'styled-components/native';
-import type { DefaultTheme } from 'styled-components/native';
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from 'styled-components/native';
 
 import AppButton from '@/components/AppComponents/AppButton';
-import AppInput from '@/components/AppComponents/AppInput';
-import AppNumberInput from '@/components/AppComponents/AppNumberInput';
-import AppSpacer from '@/components/AppComponents/AppSpacer';
-import AppText from '@/components/AppComponents/AppText';
 import { useCreatePool } from '@/hooks/useCreatePool';
+import { TypographyFamilies } from '@/constants/tokens';
 
-// Tournament ID is fixed to the 2026 World Cup
 const TOURNAMENT_ID = 1;
 
 export default function CreatePoolScreen() {
   const router = useRouter();
   const theme = useTheme();
+  const c = theme.colors;
   const { createPool, loading, error } = useCreatePool();
 
   const [name, setName] = useState('');
@@ -32,29 +39,24 @@ export default function CreatePoolScreen() {
 
   function validate(): boolean {
     let valid = true;
-
     if (!name.trim()) {
       setNameError('O nome do grupo é obrigatório.');
       valid = false;
     } else {
       setNameError('');
     }
-
     if (inviteCode.trim() && inviteCode.trim().length < 4) {
-      setInviteCodeError('O código de convite deve ter pelo menos 4 caracteres.');
+      setInviteCodeError('O código deve ter pelo menos 4 caracteres.');
       valid = false;
     } else {
       setInviteCodeError('');
     }
-
     return valid;
   }
 
   async function handleSubmit() {
     if (!validate()) return;
-
     const maxPart = maxParticipants.trim() ? parseInt(maxParticipants, 10) : undefined;
-
     const success = await createPool({
       name: name.trim(),
       description: description.trim() || undefined,
@@ -63,7 +65,6 @@ export default function CreatePoolScreen() {
       inviteCode: inviteCode.trim() || undefined,
       maxParticipants: maxPart,
     });
-
     if (success) {
       Alert.alert('Grupo criado!', 'Seu grupo foi criado com sucesso.', [
         { text: 'OK', onPress: () => router.back() },
@@ -72,140 +73,233 @@ export default function CreatePoolScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <Screen>
+    <SafeAreaView style={[s.root, { backgroundColor: c.ink950 }]}>
+      <KeyboardAvoidingView
+        style={s.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={0}
+      >
         <ScrollView
-          contentContainerStyle={{ padding: 20, paddingBottom: 48 }}
+          contentContainerStyle={s.scroll}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
         >
-          <AppText size="lg" bold>
-            Novo Grupo
-          </AppText>
-          <AppText size="sm" color={theme.colors.text_gray}>
-            Copa do Mundo 2026
-          </AppText>
+          {/* ── Header ── */}
+          <View style={s.header}>
+            <Pressable onPress={() => router.back()} style={s.backBtn} hitSlop={12}>
+              <Ionicons name="arrow-back" size={20} color={c.ink300} />
+            </Pressable>
+            <Text style={[s.heroTitle, { color: c.ink100 }]}>
+              Novo Grupo<Text style={{ color: c.pitch }}>.</Text>
+            </Text>
+            <Text style={[s.subtitle, { color: c.ink400 }]}>Copa do Mundo 2026</Text>
+          </View>
 
-          <AppSpacer verticalSpace="lg" />
+          {/* ── Basic info card ── */}
+          <Text style={[s.sectionLabel, { color: c.ink400 }]}>INFORMAÇÕES</Text>
+          <View style={s.gap8} />
+          <View style={[s.card, { backgroundColor: c.ink850 }]}>
+            <Field label="Nome do grupo" error={nameError}>
+              <TextInput
+                style={[s.input, { color: c.ink100, borderColor: nameError ? c.signalLose : c.ink700 }]}
+                placeholder="Ex: Bolão da Firma"
+                placeholderTextColor={c.ink500}
+                value={name}
+                onChangeText={setName}
+                maxLength={60}
+                autoCapitalize="words"
+                returnKeyType="next"
+              />
+            </Field>
 
-          <AppInput
-            label="Nome do grupo"
-            placeholder="Ex: Bolão da Firma"
-            value={name}
-            onChangeText={setName}
-            error={nameError}
-            maxLength={60}
-            autoCapitalize="words"
-            returnKeyType="next"
-          />
+            <View style={[s.divider, { backgroundColor: c.ink700 }]} />
 
-          <AppInput
-            label="Descrição"
-            placeholder="Opcional — descreva seu grupo"
-            value={description}
-            onChangeText={setDescription}
-            multiline
-            numberOfLines={3}
-            style={{ textAlignVertical: 'top', minHeight: 72 }}
-            maxLength={200}
-            returnKeyType="next"
-          />
+            <Field label="Descrição">
+              <TextInput
+                style={[s.input, s.inputMultiline, { color: c.ink100, borderColor: c.ink700 }]}
+                placeholder="Opcional — descreva seu grupo"
+                placeholderTextColor={c.ink500}
+                value={description}
+                onChangeText={setDescription}
+                multiline
+                numberOfLines={3}
+                maxLength={200}
+                returnKeyType="next"
+                textAlignVertical="top"
+              />
+            </Field>
+          </View>
 
-          <AppNumberInput
-            label="Máximo de participantes"
-            placeholder="Sem limite"
-            value={maxParticipants}
-            onChangeText={setMaxParticipants}
-            keyboardType="numeric"
-            maxLength={4}
-            returnKeyType="next"
-          />
+          <View style={s.gap20} />
 
-          <SectionLabel>
-            <AppText size="sm" bold color={theme.colors.text}>
-              Grupo privado
-            </AppText>
-            <Switch
-              value={isPrivate}
-              onValueChange={setIsPrivate}
-              trackColor={{ false: theme.colors.shape, true: theme.colors.primary_light }}
-              thumbColor={isPrivate ? theme.colors.primary : theme.colors.white}
-            />
-          </SectionLabel>
-          <AppText size="xsm" color={theme.colors.text_gray} style={{ marginBottom: 4 }}>
-            Grupos privados só podem ser acessados por código de convite.
-          </AppText>
+          {/* ── Settings card ── */}
+          <Text style={[s.sectionLabel, { color: c.ink400 }]}>CONFIGURAÇÕES</Text>
+          <View style={s.gap8} />
+          <View style={[s.card, { backgroundColor: c.ink850 }]}>
+            <Field label="Máximo de participantes">
+              <TextInput
+                style={[s.input, { color: c.ink100, borderColor: c.ink700 }]}
+                placeholder="Sem limite"
+                placeholderTextColor={c.ink500}
+                value={maxParticipants}
+                onChangeText={setMaxParticipants}
+                keyboardType="numeric"
+                maxLength={4}
+                returnKeyType="next"
+              />
+            </Field>
 
-          <AppSpacer verticalSpace="sm" />
+            <View style={[s.divider, { backgroundColor: c.ink700 }]} />
 
-          <AppInput
-            label="Código de convite"
-            placeholder="Opcional — ex: BOLAO2026"
-            value={inviteCode}
-            onChangeText={(t) => setInviteCode(t.toUpperCase())}
-            error={inviteCodeError}
-            autoCapitalize="characters"
-            maxLength={20}
-            returnKeyType="done"
-          />
+            {/* Private toggle row */}
+            <View style={s.toggleRow}>
+              <View style={s.toggleInfo}>
+                <Text style={[s.fieldLabel, { color: c.ink300 }]}>Grupo privado</Text>
+                <Text style={[s.toggleHint, { color: c.ink500 }]}>
+                  Acesso apenas por código de convite
+                </Text>
+              </View>
+              <Switch
+                value={isPrivate}
+                onValueChange={setIsPrivate}
+                trackColor={{ false: c.ink700, true: c.pitchSoft }}
+                thumbColor={isPrivate ? c.pitch : c.ink400}
+              />
+            </View>
 
+            <View style={[s.divider, { backgroundColor: c.ink700 }]} />
+
+            <Field label="Código de convite" error={inviteCodeError}>
+              <TextInput
+                style={[s.input, { color: c.ink100, borderColor: inviteCodeError ? c.signalLose : c.ink700 }]}
+                placeholder="Opcional — ex: BOLAO2026"
+                placeholderTextColor={c.ink500}
+                value={inviteCode}
+                onChangeText={(t) => setInviteCode(t.toUpperCase())}
+                autoCapitalize="characters"
+                maxLength={20}
+                returnKeyType="done"
+                onSubmitEditing={handleSubmit}
+              />
+            </Field>
+          </View>
+
+          {/* ── API error ── */}
           {!!error && (
             <>
-              <AppSpacer verticalSpace="sm" />
-              <ErrorBox>
-                <Ionicons name="alert-circle-outline" size={16} color={theme.colors.negative} />
-                <AppText size="sm" color={theme.colors.negative} style={{ marginLeft: 6, flex: 1 }}>
-                  {error}
-                </AppText>
-              </ErrorBox>
+              <View style={s.gap12} />
+              <View style={[s.errorBox, { backgroundColor: c.ink850, borderColor: c.signalLose }]}>
+                <Ionicons name="alert-circle-outline" size={16} color={c.signalLose} />
+                <Text style={[s.errorText, { color: c.signalLose }]}>{error}</Text>
+              </View>
             </>
           )}
 
-          <AppSpacer verticalSpace="lg" />
+          <View style={s.gap28} />
 
+          {/* ── Actions ── */}
           <AppButton
             title="Criar grupo"
-            variant="solid"
-            color={theme.colors.primary}
-            size="md"
+            variant="primary"
+            size="lg"
             isLoading={loading}
             onPress={handleSubmit}
           />
-
-          <AppSpacer verticalSpace="sm" />
-
+          <View style={s.gap12} />
           <AppButton
             title="Cancelar"
-            variant="transparent"
+            variant="ghost"
             size="md"
             onPress={() => router.back()}
             disabled={loading}
           />
         </ScrollView>
-      </Screen>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
-const Screen = styled.View<{ theme: DefaultTheme }>`
-  flex: 1;
-  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.background};
-`;
+// ─── Field wrapper ─────────────────────────────────────────────────────────────
 
-const SectionLabel = styled.View`
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 4px;
-`;
+function Field({
+  label,
+  error,
+  children,
+}: {
+  label: string;
+  error?: string;
+  children: React.ReactNode;
+}) {
+  const c = useTheme().colors;
+  return (
+    <View style={s.fieldWrap}>
+      <Text style={[s.fieldLabel, { color: c.ink400 }]}>{label}</Text>
+      <View style={s.gap6} />
+      {children}
+      {!!error && (
+        <Text style={[s.fieldError, { color: c.signalLose }]}>{error}</Text>
+      )}
+    </View>
+  );
+}
 
-const ErrorBox = styled.View<{ theme: DefaultTheme }>`
-  flex-direction: row;
-  align-items: center;
-  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.negative_light};
-  border-radius: 8px;
-  padding: 10px 12px;
-`;
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
+const s = StyleSheet.create({
+  root: { flex: 1 },
+  flex: { flex: 1 },
+  scroll: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 48 },
+
+  header: { marginBottom: 24 },
+  backBtn: { marginBottom: 12, alignSelf: 'flex-start' },
+  heroTitle: { fontFamily: TypographyFamilies.display, fontSize: 38, lineHeight: 42 },
+  subtitle: { fontFamily: TypographyFamilies.sans, fontSize: 13, marginTop: 4 },
+
+  sectionLabel: { fontFamily: TypographyFamilies.sansSemi, fontSize: 11, letterSpacing: 0.8 },
+
+  card: { borderRadius: 16, overflow: 'hidden' },
+  divider: { height: 1, marginHorizontal: 16 },
+
+  // Field
+  fieldWrap: { padding: 14 },
+  fieldLabel: { fontFamily: TypographyFamilies.sansMedium, fontSize: 11, letterSpacing: 0.5 },
+  fieldError: { fontFamily: TypographyFamilies.sans, fontSize: 12, marginTop: 4 },
+  gap6: { height: 6 },
+
+  input: {
+    fontFamily: TypographyFamilies.sans,
+    fontSize: 15,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  inputMultiline: { minHeight: 72, textAlignVertical: 'top' },
+
+  // Toggle
+  toggleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 14,
+  },
+  toggleInfo: { flex: 1, marginRight: 12 },
+  toggleHint: { fontFamily: TypographyFamilies.sans, fontSize: 12, marginTop: 2 },
+
+  // Error box
+  errorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 12,
+    gap: 8,
+  },
+  errorText: { fontFamily: TypographyFamilies.sans, fontSize: 13, flex: 1 },
+
+  // Spacing
+  gap8: { height: 8 },
+  gap12: { height: 12 },
+  gap20: { height: 20 },
+  gap28: { height: 28 },
+});

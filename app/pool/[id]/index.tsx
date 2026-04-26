@@ -5,22 +5,26 @@ import {
   FlatList,
   Pressable,
   RefreshControl,
-  SafeAreaView,
+  ScrollView,
   SectionList,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useTheme } from 'styled-components/native';
 
 import { usePool } from '@/hooks/usePool';
+import type { PoolDetail } from '@/hooks/usePool';
 import { usePoolStandings } from '@/hooks/usePoolStandings';
 import { usePoolMembers } from '@/hooks/usePoolMembers';
+import type { PoolMember } from '@/hooks/usePoolMembers';
 import { useMatches } from '@/hooks/useMatches';
 import { usePredictions } from '@/hooks/usePredictions';
 import { useLeavePool } from '@/hooks/useLeavePool';
+import { useRemovePoolMember } from '@/hooks/useRemovePoolMember';
 import { useSession } from '@/context/SessionContext';
 import type { Match } from '@/domain/entities/Match';
 import { MatchStage } from '@/domain/enums/MatchStage';
@@ -34,6 +38,7 @@ import {
 } from '@/domain/helpers/matchFilters';
 
 import AppButton from '@/components/AppComponents/AppButton';
+import AppAvatar from '@/components/AppComponents/AppAvatar';
 import MatchCard from '@/components/AppComponents/MatchCard';
 import LeaderboardRow from '@/components/AppComponents/LeaderboardRow';
 import { LeaderboardHeader } from '@/components/AppComponents/LeaderboardRow';
@@ -300,6 +305,200 @@ function PredictionMatchPanel({
   );
 }
 
+// ─── Group info tab ───────────────────────────────────────────────────────────
+
+function GroupInfoTab({
+  pool,
+  members,
+  membersLoading,
+  membersError,
+  membersRefresh,
+  isAdmin,
+  removingUserId,
+  onRemove,
+  leavePending,
+  onLeave,
+}: {
+  pool: PoolDetail;
+  members: PoolMember[];
+  membersLoading: boolean;
+  membersError: string | null;
+  membersRefresh: () => void;
+  isAdmin: boolean;
+  removingUserId: string | null;
+  onRemove: (member: PoolMember) => void;
+  leavePending: boolean;
+  onLeave: () => void;
+}) {
+  const c = useTheme().colors;
+  const rules = pool.scoringRules;
+
+  const scoringRows = [
+    { label: 'Placar exato', value: `${rules.exactScorePoints} pts` },
+    { label: 'Vencedor + saldo de gols', value: `${rules.correctWinnerGoalDiffPoints} pts` },
+    { label: 'Vencedor correto', value: `${rules.correctWinnerPoints} pts` },
+    { label: 'Empate correto', value: `${rules.correctDrawPoints} pts` },
+    { label: 'Multiplicador mata-mata', value: `×${rules.knockoutMultiplier}` },
+    { label: 'Multiplicador final', value: `×${rules.finalMultiplier}` },
+  ];
+
+  return (
+    <ScrollView
+      contentContainerStyle={sg.scroll}
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={membersLoading}
+          onRefresh={membersRefresh}
+          tintColor={c.pitch}
+        />
+      }
+    >
+      {/* ── Invite code ── */}
+      <Text style={[sg.sectionLabel, { color: c.ink400 }]}>CÓDIGO DO GRUPO</Text>
+      <View style={sg.gap8} />
+      <View style={[sg.card, { backgroundColor: c.ink850 }]}>
+        {pool.inviteCode ? (
+          <>
+            <Text style={[sg.hint, { color: c.ink500 }]}>
+              Compartilhe este código para convidar participantes
+            </Text>
+            <View style={[sg.codePill, { backgroundColor: c.ink800 }]}>
+              <Text style={[sg.codeText, { color: c.pitch }]}>{pool.inviteCode}</Text>
+            </View>
+          </>
+        ) : (
+          <Text style={[sg.hint, { color: c.ink500 }]}>
+            Este grupo não possui código de convite.
+          </Text>
+        )}
+      </View>
+
+      <View style={sg.gap20} />
+
+      {/* ── Scoring rules ── */}
+      <Text style={[sg.sectionLabel, { color: c.ink400 }]}>PONTUAÇÃO</Text>
+      <View style={sg.gap8} />
+      <View style={[sg.card, { backgroundColor: c.ink850 }]}>
+        {scoringRows.map((row, i) => (
+          <View key={row.label}>
+            {i > 0 && <View style={[sg.divider, { backgroundColor: c.ink700 }]} />}
+            <View style={sg.ruleRow}>
+              <Text style={[sg.ruleLabel, { color: c.ink300 }]}>{row.label}</Text>
+              <Text style={[sg.ruleValue, { color: c.pitch }]}>{row.value}</Text>
+            </View>
+          </View>
+        ))}
+      </View>
+
+      <View style={sg.gap20} />
+
+      {/* ── Members ── */}
+      <Text style={[sg.sectionLabel, { color: c.ink400 }]}>
+        PARTICIPANTES · {pool.participantsCount}
+      </Text>
+      <View style={sg.gap8} />
+      <View style={[sg.card, { backgroundColor: c.ink850 }]}>
+        {membersError ? (
+          <Text style={[sg.hint, { color: c.signalLose }]}>{membersError}</Text>
+        ) : members.length === 0 ? (
+          <Text style={[sg.hint, { color: c.ink500 }]}>Nenhum participante ainda.</Text>
+        ) : (
+          members.map((member, i) => {
+            const name = member.fullName ?? member.name ?? 'Participante';
+            const isCreatorMember = member.id === pool.creatorId;
+            const isRemoving = removingUserId === member.id;
+
+            return (
+              <View key={member.id || i}>
+                {i > 0 && <View style={[sg.divider, { backgroundColor: c.ink700 }]} />}
+                <View style={sg.memberRow}>
+                  <AppAvatar
+                    imagePath={member.profileImageUrl ?? undefined}
+                    name={name}
+                    size={36}
+                  />
+                  <View style={sg.memberInfo}>
+                    <Text style={[sg.memberName, { color: c.ink100 }]} numberOfLines={1}>
+                      {name}
+                    </Text>
+                    {isCreatorMember && (
+                      <Text style={[sg.memberBadge, { color: c.pitchSoft }]}>Admin</Text>
+                    )}
+                  </View>
+                  {isAdmin && !isCreatorMember && (
+                    isRemoving ? (
+                      <ActivityIndicator size="small" color={c.signalLose} />
+                    ) : (
+                      <Pressable onPress={() => onRemove(member)} hitSlop={12}>
+                        <Ionicons name="person-remove-outline" size={18} color={c.signalLose} />
+                      </Pressable>
+                    )
+                  )}
+                </View>
+              </View>
+            );
+          })
+        )}
+      </View>
+
+      {/* ── Leave button (non-admin only) ── */}
+      {!isAdmin && (
+        <>
+          <View style={sg.gap28} />
+          <AppButton
+            title="Sair do grupo"
+            variant="destructive"
+            size="lg"
+            isLoading={leavePending}
+            onPress={onLeave}
+          />
+        </>
+      )}
+
+      <View style={sg.gap28} />
+    </ScrollView>
+  );
+}
+
+const sg = StyleSheet.create({
+  scroll: { paddingHorizontal: 16, paddingTop: 16 },
+  sectionLabel: { fontFamily: TypographyFamilies.sansSemi, fontSize: 11, letterSpacing: 0.8 },
+  gap8: { height: 8 },
+  gap20: { height: 20 },
+  gap28: { height: 28 },
+  card: { borderRadius: 16, overflow: 'hidden' },
+  divider: { height: 1, marginHorizontal: 14 },
+  hint: { fontFamily: TypographyFamilies.sans, fontSize: 13, padding: 14, lineHeight: 18 },
+  codePill: {
+    margin: 14,
+    marginTop: 4,
+    borderRadius: 10,
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  codeText: { fontFamily: TypographyFamilies.mono, fontSize: 22, letterSpacing: 4 },
+  ruleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+  },
+  ruleLabel: { fontFamily: TypographyFamilies.sans, fontSize: 14 },
+  ruleValue: { fontFamily: TypographyFamilies.sansSemi, fontSize: 14 },
+  memberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+    gap: 12,
+  },
+  memberInfo: { flex: 1, gap: 2 },
+  memberName: { fontFamily: TypographyFamilies.sansSemi, fontSize: 14 },
+  memberBadge: { fontFamily: TypographyFamilies.sansMedium, fontSize: 11 },
+});
+
 // ─── Main screen ──────────────────────────────────────────────────────────────
 
 export default function PoolDetailsScreen() {
@@ -332,6 +531,7 @@ export default function PoolDetailsScreen() {
   const { standings, loading: standingsLoading, refresh: standingsRefresh } = usePoolStandings(poolId);
   const { members, loading: membersLoading, error: membersError, refresh: membersRefresh } = usePoolMembers(poolId);
   const leaveMutation = useLeavePool(poolId ?? 0);
+  const removeMutation = useRemovePoolMember(poolId);
 
   const memberById = useMemo(() => {
     const map = new Map<string, (typeof members)[number]>();
@@ -405,19 +605,6 @@ export default function PoolDetailsScreen() {
   const currentUserRank = currentUserEntry?.rank ?? null;
   const lastUpdatedMinutes = minutesSince(standings[0]?.lastUpdated);
 
-  // Group stage matches for Grupo tab
-  const groupSections = useMemo(() => {
-    const gm = (matches ?? []).filter((m) => m.stage === MatchStage.GROUP);
-    const byGroup = new Map<string, Match[]>();
-    for (const m of gm) {
-      const g = (m as any).group ?? '?';
-      if (!byGroup.has(g)) byGroup.set(g, []);
-      byGroup.get(g)!.push(m);
-    }
-    return Array.from(byGroup.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([g, ms]) => ({ title: `Grupo ${g}`, data: ms }));
-  }, [matches]);
 
   // ── Loading / Error ──────────────────────────────────────────────────────────
 
@@ -470,6 +657,24 @@ export default function PoolDetailsScreen() {
         },
       ],
     );
+  }
+
+  function handleRemoveMember(member: PoolMember) {
+    const name = member.fullName ?? member.name ?? 'este participante';
+    Alert.alert('Remover participante', `Remover ${name} do grupo?`, [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Remover',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await removeMutation.mutateAsync(member.id);
+          } catch (e) {
+            Alert.alert('Erro', (e as Error).message);
+          }
+        },
+      },
+    ]);
   }
 
   // ── Stats for hero ───────────────────────────────────────────────────────────
@@ -641,52 +846,19 @@ export default function PoolDetailsScreen() {
         />
       )}
 
-      {/* ── Grupo (group stage matches, global mode) ── */}
+      {/* ── Grupo ── */}
       {activeTab === 'info' && (
-        <SectionList
-          sections={groupSections}
-          keyExtractor={(item) => String(item.id)}
-          contentContainerStyle={s.listContent}
-          stickySectionHeadersEnabled
-          refreshControl={
-            <RefreshControl
-              refreshing={matchesFetching}
-              onRefresh={matchesRefetch}
-              tintColor={theme.colors.pitch}
-            />
-          }
-          ListEmptyComponent={
-            <View style={s.centered}>
-              <Text style={[s.emptyTxt, { color: theme.colors.ink500 }]}>
-                Sem partidas de grupo ainda
-              </Text>
-            </View>
-          }
-          ListFooterComponent={
-            !pool.isCreator ? (
-              <View style={s.standingsFooter}>
-                <AppButton
-                  title="Sair do grupo"
-                  variant="destructive"
-                  isLoading={leaveMutation.isPending}
-                  onPress={handleLeave}
-                />
-              </View>
-            ) : null
-          }
-          renderSectionHeader={({ section }) => (
-            <View
-              style={[s.sectionHeader, { backgroundColor: theme.colors.background }]}
-            >
-              <Text style={[s.sectionTitle, { color: theme.colors.ink500 }]}>
-                {section.title.toUpperCase()}
-              </Text>
-              <View style={[s.sectionLine, { backgroundColor: theme.colors.ink800 }]} />
-            </View>
-          )}
-          renderItem={({ item }) => (
-            <MatchCard match={item} />
-          )}
+        <GroupInfoTab
+          pool={pool}
+          members={members}
+          membersLoading={membersLoading}
+          membersError={membersError}
+          membersRefresh={membersRefresh}
+          isAdmin={pool.isCreator}
+          removingUserId={removeMutation.isPending ? (removeMutation.variables as string ?? null) : null}
+          onRemove={handleRemoveMember}
+          leavePending={leaveMutation.isPending}
+          onLeave={handleLeave}
         />
       )}
     </SafeAreaView>
