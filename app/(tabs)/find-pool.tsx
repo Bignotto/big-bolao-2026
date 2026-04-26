@@ -8,24 +8,26 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
+  StyleSheet,
+  Text,
   TextInput,
+  View,
 } from 'react-native';
-import styled from 'styled-components/native';
-import type { DefaultTheme } from 'styled-components/native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from 'styled-components/native';
 
 import AppButton from '@/components/AppComponents/AppButton';
-import AppSpacer from '@/components/AppComponents/AppSpacer';
-import AppText from '@/components/AppComponents/AppText';
 import { useJoinPool } from '@/hooks/useJoinPool';
 import { useSearchPools } from '@/hooks/useSearchPools';
 import type { Pool } from '@/hooks/usePools';
+import { TypographyFamilies } from '@/constants/tokens';
 
 type SearchMode = 'byName' | 'byCode';
 
 export default function FindPoolScreen() {
   const router = useRouter();
   const theme = useTheme();
+  const c = theme.colors;
 
   const [mode, setMode] = useState<SearchMode>('byName');
   const [nameQuery, setNameQuery] = useState('');
@@ -48,23 +50,12 @@ export default function FindPoolScreen() {
     clearJoinError,
   } = useJoinPool();
 
-  // Debounced name search
   useEffect(() => {
     if (mode !== 'byName') return;
     if (debounceRef.current) clearTimeout(debounceRef.current);
-
-    if (nameQuery.trim().length < 2) {
-      reset();
-      return;
-    }
-
-    debounceRef.current = setTimeout(() => {
-      search(nameQuery.trim());
-    }, 400);
-
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
+    if (nameQuery.trim().length < 2) { reset(); return; }
+    debounceRef.current = setTimeout(() => search(nameQuery.trim()), 400);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [nameQuery]);
 
   function handleSwitchMode(next: SearchMode) {
@@ -74,7 +65,6 @@ export default function FindPoolScreen() {
     if (next === 'byCode') reset();
   }
 
-  // Show alert when joinError changes (for list mode)
   useEffect(() => {
     if (joinError && mode === 'byName') {
       Alert.alert('Aviso', joinError, [{ text: 'OK', onPress: clearJoinError }]);
@@ -114,98 +104,117 @@ export default function FindPoolScreen() {
   const isFull = (pool: Pool) =>
     pool.maxParticipants != null && pool.participantsCount >= pool.maxParticipants;
 
+  // ── Pool card (byName mode) ──────────────────────────────────────────────────
+
   function renderPoolItem({ item }: { item: Pool }) {
     const isJoining = joiningId === item.id;
     const alreadyIn = item.isParticipant;
     const full = isFull(item);
 
     return (
-      <CardPressable onPress={() => router.push(`/pool/${item.id}`)}>
-        <CardHeader>
-          <AppText size="md" bold numberOfLines={1} style={{ flex: 1 }}>
+      <Pressable
+        style={[s.card, { backgroundColor: c.ink850 }]}
+        onPress={() => router.push(`/pool/${item.id}`)}
+      >
+        <View style={s.cardHeaderRow}>
+          <Text style={[s.cardTitle, { color: c.ink100 }]} numberOfLines={1}>
             {item.name}
-          </AppText>
-          <BadgeRow>
-            {item.isPrivate && (
-              <Ionicons name="lock-closed-outline" size={14} color={theme.colors.text_gray} style={{ marginLeft: 6 }} />
-            )}
-          </BadgeRow>
-        </CardHeader>
+          </Text>
+          {item.isPrivate && (
+            <Ionicons name="lock-closed-outline" size={14} color={c.ink400} style={{ marginLeft: 6 }} />
+          )}
+        </View>
 
         {!!item.description && (
-          <AppText size="sm" color={theme.colors.text_gray} numberOfLines={2} style={{ marginTop: 6 }}>
+          <Text style={[s.cardDesc, { color: c.ink400 }]} numberOfLines={2}>
             {item.description}
-          </AppText>
+          </Text>
         )}
 
-        <AppSpacer verticalSpace="sm" />
+        <View style={s.cardFooter}>
+          <View style={s.participantsRow}>
+            <Ionicons name="people-outline" size={14} color={c.ink500} />
+            <Text style={[s.participantsText, { color: c.ink500 }]}>
+              {item.participantsCount}
+              {item.maxParticipants != null ? ` / ${item.maxParticipants}` : ''}
+            </Text>
+          </View>
 
-        <CardFooter>
-          <FooterItem>
-            <Ionicons name="people-outline" size={14} color={theme.colors.text_gray} />
-            <AppText size="xsm" color={theme.colors.text_gray} style={{ marginLeft: 4 }}>
-              {item.participantsCount}{item.maxParticipants != null ? ` / ${item.maxParticipants}` : ''}
-            </AppText>
-          </FooterItem>
-
-          <JoinButtonWrap>
-            {alreadyIn ? (
-              <AppButton title="Já participo" variant="transparent" size="sm" disabled />
-            ) : full ? (
-              <AppButton title="Lotado" variant="transparent" size="sm" disabled />
-            ) : (
-              <AppButton
-                title="Entrar"
-                variant="solid"
-                color={theme.colors.primary}
-                size="sm"
-                isLoading={isJoining}
-                onPress={() => handleJoinById(item)}
-              />
-            )}
-          </JoinButtonWrap>
-        </CardFooter>
-      </CardPressable>
+          {alreadyIn ? (
+            <View style={[s.alreadyInBadge, { borderColor: c.ink700 }]}>
+              <Text style={[s.alreadyInText, { color: c.ink400 }]}>Já participo</Text>
+            </View>
+          ) : full ? (
+            <View style={[s.alreadyInBadge, { borderColor: c.ink700 }]}>
+              <Text style={[s.alreadyInText, { color: c.ink400 }]}>Lotado</Text>
+            </View>
+          ) : (
+            <AppButton
+              title="Entrar"
+              variant="primary"
+              size="sm"
+              isLoading={isJoining}
+              onPress={() => handleJoinById(item)}
+            />
+          )}
+        </View>
+      </Pressable>
     );
   }
 
+  // ── Render ───────────────────────────────────────────────────────────────────
+
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <Screen>
+    <SafeAreaView style={[s.root, { backgroundColor: c.ink950 }]}>
+      <KeyboardAvoidingView
+        style={s.flex}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={0}
+      >
         {/* Header */}
-        <ScreenHeader>
-          <AppText size="lg" bold>
-            Buscar Grupos
-          </AppText>
-          <AppText size="sm" color={theme.colors.text_gray}>
-            Copa do Mundo 2026
-          </AppText>
-        </ScreenHeader>
+        <View style={s.header}>
+          <View style={s.headerRow}>
+            <Text style={[s.heroTitle, { color: c.ink100 }]}>
+              Buscar Grupos
+            </Text>
+            <Pressable
+              style={[s.createBtn, { backgroundColor: c.ink850, borderColor: c.ink700 }]}
+              onPress={() => router.push('/(tabs)/create-pool')}
+            >
+              <Ionicons name="add" size={18} color={c.pitch} />
+              <Text style={[s.createBtnText, { color: c.pitch }]}>Criar grupo</Text>
+            </Pressable>
+          </View>
+          <Text style={[s.subtitle, { color: c.ink400 }]}>Copa do Mundo 2026</Text>
+        </View>
 
-        {/* Mode toggle */}
-        <SegmentRow>
-          <SegmentButton active={mode === 'byName'} onPress={() => handleSwitchMode('byName')}>
-            <AppText size="sm" bold color={mode === 'byName' ? theme.colors.white : theme.colors.text_gray}>
-              Por nome
-            </AppText>
-          </SegmentButton>
-          <SegmentButton active={mode === 'byCode'} onPress={() => handleSwitchMode('byCode')}>
-            <AppText size="sm" bold color={mode === 'byCode' ? theme.colors.white : theme.colors.text_gray}>
-              Por código
-            </AppText>
-          </SegmentButton>
-        </SegmentRow>
+        {/* Segmented control */}
+        <View style={[s.segmentTrack, { backgroundColor: c.ink850 }]}>
+          {(['byName', 'byCode'] as SearchMode[]).map((m) => {
+            const active = mode === m;
+            return (
+              <Pressable
+                key={m}
+                style={[s.segmentTab, active && { backgroundColor: c.pitch }]}
+                onPress={() => handleSwitchMode(m)}
+              >
+                <Text style={[s.segmentText, { color: active ? c.pitchInk : c.ink400 }]}>
+                  {m === 'byName' ? 'Por nome' : 'Por código'}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
 
-        {/* By Name mode */}
+        {/* ── By Name ── */}
         {mode === 'byName' && (
           <>
-            <SearchRow>
-              <Ionicons name="search-outline" size={18} color={theme.colors.text_gray} style={{ marginRight: 8 }} />
-              <SearchInput
+            <View style={[s.searchRow, { backgroundColor: c.ink850 }]}>
+              <Ionicons name="search-outline" size={18} color={c.ink500} />
+              <TextInput
+                style={[s.searchInput, { color: c.ink100 }]}
                 placeholder="Nome do grupo..."
+                placeholderTextColor={c.ink500}
                 value={nameQuery}
                 onChangeText={setNameQuery}
                 autoFocus
@@ -213,339 +222,328 @@ export default function FindPoolScreen() {
                 returnKeyType="search"
                 clearButtonMode="while-editing"
               />
-            </SearchRow>
-
-            {nameQuery.trim().length < 2 && nameQuery.length > 0 && (
-              <HintView>
-                <AppText size="sm" color={theme.colors.text_gray} align="center">
-                  Digite pelo menos 2 caracteres para buscar.
-                </AppText>
-              </HintView>
-            )}
+            </View>
 
             {nameQuery.trim().length === 0 && (
-              <HintView>
-                <Ionicons name="search-outline" size={40} color={theme.colors.text_disabled} />
-                <AppSpacer verticalSpace="sm" />
-                <AppText size="sm" color={theme.colors.text_disabled} align="center">
+              <View style={s.hintView}>
+                <Ionicons name="search-outline" size={44} color={c.ink700} />
+                <Text style={[s.hintText, { color: c.ink500 }]}>
                   Digite o nome do grupo que você quer entrar.
-                </AppText>
-              </HintView>
+                </Text>
+              </View>
+            )}
+
+            {nameQuery.trim().length > 0 && nameQuery.trim().length < 2 && (
+              <View style={s.hintView}>
+                <Text style={[s.hintText, { color: c.ink500 }]}>
+                  Digite pelo menos 2 caracteres para buscar.
+                </Text>
+              </View>
             )}
 
             {searching && (
-              <CenteredView>
-                <ActivityIndicator size="large" color={theme.colors.primary} />
-              </CenteredView>
+              <View style={s.centeredView}>
+                <ActivityIndicator size="large" color={c.pitch} />
+              </View>
             )}
 
             {!searching && !!searchError && (
-              <CenteredView>
-                <Ionicons name="alert-circle-outline" size={40} color={theme.colors.negative} />
-                <AppSpacer verticalSpace="sm" />
-                <AppText size="sm" color={theme.colors.negative} align="center">
+              <View style={s.centeredView}>
+                <Ionicons name="alert-circle-outline" size={40} color={c.signalLose} />
+                <Text style={[s.hintText, { color: c.signalLose, marginTop: 12 }]}>
                   {searchError}
-                </AppText>
-                <AppSpacer verticalSpace="md" />
-                <AppButton
-                  title="Tentar novamente"
-                  variant="solid"
-                  size="sm"
-                  onPress={() => search(nameQuery.trim())}
-                />
-              </CenteredView>
+                </Text>
+                <View style={{ marginTop: 16 }}>
+                  <AppButton
+                    title="Tentar novamente"
+                    variant="secondary"
+                    size="sm"
+                    onPress={() => search(nameQuery.trim())}
+                  />
+                </View>
+              </View>
             )}
 
             {!searching && !searchError && nameQuery.trim().length >= 2 && (
               <FlatList<Pool>
                 data={pools}
                 keyExtractor={(item) => String(item.id)}
-                contentContainerStyle={{ padding: 16, paddingBottom: 32, gap: 12 }}
+                contentContainerStyle={s.listContent}
                 renderItem={renderPoolItem}
                 showsVerticalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
                 ListEmptyComponent={
-                  <HintView>
-                    <Ionicons name="search-outline" size={40} color={theme.colors.text_disabled} />
-                    <AppSpacer verticalSpace="sm" />
-                    <AppText size="sm" color={theme.colors.text_disabled} align="center">
+                  <View style={s.hintView}>
+                    <Ionicons name="search-outline" size={44} color={c.ink700} />
+                    <Text style={[s.hintText, { color: c.ink500 }]}>
                       Nenhum grupo encontrado para "{nameQuery}".
-                    </AppText>
-                  </HintView>
+                    </Text>
+                  </View>
                 }
               />
             )}
-
           </>
         )}
 
-        {/* By Code mode */}
+        {/* ── By Code ── */}
         {mode === 'byCode' && (
-          <CodeSection>
-            <CodeInputRow>
-              <CodeInput
+          <View style={s.codeSection}>
+            <View style={s.codeInputRow}>
+              <TextInput
+                style={[s.codeInput, { backgroundColor: c.ink850, color: c.ink100, borderColor: c.ink700 }]}
                 placeholder="Ex: BOLAO2026"
+                placeholderTextColor={c.ink500}
                 value={codeQuery}
-                onChangeText={(t: string) => setCodeQuery(t.toUpperCase())}
+                onChangeText={(t) => setCodeQuery(t.toUpperCase())}
                 autoCapitalize="characters"
                 autoFocus
                 returnKeyType="search"
                 onSubmitEditing={handleFindByCode}
-                placeholderTextColor={theme.colors.text_disabled}
               />
-              <AppSpacer horizontalSpace="sm" />
               <AppButton
                 title="Buscar"
-                variant="solid"
-                color={theme.colors.primary}
-                size="sm"
+                variant="primary"
+                size="md"
                 isLoading={previewing}
                 onPress={handleFindByCode}
+                style={{ width: 88 }}
               />
-            </CodeInputRow>
-
-            <AppSpacer verticalSpace="md" />
+            </View>
 
             {previewing && (
-              <CenteredView>
-                <ActivityIndicator size="large" color={theme.colors.primary} />
-              </CenteredView>
+              <View style={s.centeredView}>
+                <ActivityIndicator size="large" color={c.pitch} />
+              </View>
             )}
 
             {!previewing && !!previewError && (
-              <ErrorBox>
-                <Ionicons name="alert-circle-outline" size={16} color={theme.colors.negative} />
-                <AppText size="sm" color={theme.colors.negative} style={{ marginLeft: 6, flex: 1 }}>
-                  {previewError}
-                </AppText>
-              </ErrorBox>
+              <View style={[s.errorBox, { backgroundColor: c.ink850, borderColor: c.signalLose }]}>
+                <Ionicons name="alert-circle-outline" size={16} color={c.signalLose} />
+                <Text style={[s.errorText, { color: c.signalLose }]}>{previewError}</Text>
+              </View>
             )}
 
             {!previewing && !previewError && !!previewPool && (
-              <PreviewCard>
-                <PreviewHeader>
-                  <AppText size="lg" bold style={{ flex: 1 }}>
+              <View style={[s.card, { backgroundColor: c.ink850 }]}>
+                <View style={s.cardHeaderRow}>
+                  <Text style={[s.cardTitle, { color: c.ink100 }]} numberOfLines={1}>
                     {previewPool.name}
-                  </AppText>
+                  </Text>
                   {previewPool.isPrivate && (
-                    <Ionicons name="lock-closed-outline" size={18} color={theme.colors.text_gray} style={{ marginLeft: 8 }} />
+                    <Ionicons name="lock-closed-outline" size={16} color={c.ink400} style={{ marginLeft: 8 }} />
                   )}
-                </PreviewHeader>
+                </View>
 
                 {!!previewPool.description && (
-                  <>
-                    <AppSpacer verticalSpace="sm" />
-                    <AppText size="sm" color={theme.colors.text_gray}>
-                      {previewPool.description}
-                    </AppText>
-                  </>
+                  <Text style={[s.cardDesc, { color: c.ink400 }]}>
+                    {previewPool.description}
+                  </Text>
                 )}
 
-                <AppSpacer verticalSpace="md" />
+                <View style={[s.participantsRow, { marginTop: 8 }]}>
+                  <Ionicons name="people-outline" size={14} color={c.ink500} />
+                  <Text style={[s.participantsText, { color: c.ink500 }]}>
+                    {previewPool.participantsCount}
+                    {previewPool.maxParticipants != null
+                      ? ` / ${previewPool.maxParticipants} participantes`
+                      : ' participantes'}
+                  </Text>
+                </View>
 
-                <StatRow>
-                  <Ionicons name="people-outline" size={16} color={theme.colors.text_gray} />
-                  <AppText size="sm" color={theme.colors.text_gray} style={{ marginLeft: 6 }}>
-                    {previewPool.participantsCount}{' '}
-                    {previewPool.maxParticipants != null ? `/ ${previewPool.maxParticipants} participantes` : 'participantes'}
-                  </AppText>
-                </StatRow>
-
-                <AppSpacer verticalSpace="lg" />
-
-                {previewPool.isParticipant ? (
-                  <InfoBanner>
-                    <Ionicons name="checkmark-circle-outline" size={18} color={theme.colors.primary} />
-                    <AppText size="sm" color={theme.colors.primary} style={{ marginLeft: 8 }}>
-                      Você já participa deste grupo.
-                    </AppText>
-                  </InfoBanner>
-                ) : isFull(previewPool) ? (
-                  <InfoBanner>
-                    <Ionicons name="close-circle-outline" size={18} color={theme.colors.text_gray} />
-                    <AppText size="sm" color={theme.colors.text_gray} style={{ marginLeft: 8 }}>
-                      Este grupo está lotado.
-                    </AppText>
-                  </InfoBanner>
-                ) : (
-                  <>
-                    <AppButton
-                      title="Entrar no Grupo"
-                      variant="solid"
-                      color={theme.colors.primary}
-                      size="md"
-                      isLoading={joining}
-                      onPress={handleJoinByCode}
-                    />
-                    {!!joinError && (
-                      <>
-                        <AppSpacer verticalSpace="sm" />
-                        <ErrorBox>
-                          <Ionicons name="alert-circle-outline" size={16} color={theme.colors.negative} />
-                          <AppText size="sm" color={theme.colors.negative} style={{ marginLeft: 6, flex: 1 }}>
-                            {joinError}
-                          </AppText>
-                        </ErrorBox>
-                      </>
-                    )}
-                  </>
-                )}
-              </PreviewCard>
+                <View style={{ marginTop: 20 }}>
+                  {previewPool.isParticipant ? (
+                    <View style={[s.infoBanner, { backgroundColor: c.ink800, borderColor: c.ink700 }]}>
+                      <Ionicons name="checkmark-circle-outline" size={18} color={c.signalWin} />
+                      <Text style={[s.infoText, { color: c.signalWin }]}>
+                        Você já participa deste grupo.
+                      </Text>
+                    </View>
+                  ) : isFull(previewPool) ? (
+                    <View style={[s.infoBanner, { backgroundColor: c.ink800, borderColor: c.ink700 }]}>
+                      <Ionicons name="close-circle-outline" size={18} color={c.ink400} />
+                      <Text style={[s.infoText, { color: c.ink400 }]}>
+                        Este grupo está lotado.
+                      </Text>
+                    </View>
+                  ) : (
+                    <>
+                      <AppButton
+                        title="Entrar no Grupo"
+                        variant="primary"
+                        size="lg"
+                        isLoading={joining}
+                        onPress={handleJoinByCode}
+                      />
+                      {!!joinError && (
+                        <View style={[s.errorBox, { backgroundColor: c.ink800, borderColor: c.signalLose, marginTop: 12 }]}>
+                          <Ionicons name="alert-circle-outline" size={16} color={c.signalLose} />
+                          <Text style={[s.errorText, { color: c.signalLose }]}>{joinError}</Text>
+                        </View>
+                      )}
+                    </>
+                  )}
+                </View>
+              </View>
             )}
 
             {!previewing && !previewError && !previewPool && (
-              <HintView>
-                <Ionicons name="key-outline" size={40} color={theme.colors.text_disabled} />
-                <AppSpacer verticalSpace="sm" />
-                <AppText size="sm" color={theme.colors.text_disabled} align="center">
+              <View style={s.hintView}>
+                <Ionicons name="key-outline" size={44} color={c.ink700} />
+                <Text style={[s.hintText, { color: c.ink500 }]}>
                   Digite o código de convite e toque em Buscar.
-                </AppText>
-              </HintView>
+                </Text>
+              </View>
             )}
-          </CodeSection>
+          </View>
         )}
-      </Screen>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
-// --- Styled Components ---
+// ─── Styles ───────────────────────────────────────────────────────────────────
 
-const Screen = styled.View<{ theme: DefaultTheme }>`
-  flex: 1;
-  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.background};
-`;
+const s = StyleSheet.create({
+  root: { flex: 1 },
+  flex: { flex: 1 },
 
-const ScreenHeader = styled.View`
-  padding: 16px 16px 8px;
-`;
+  header: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 4 },
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  heroTitle: { fontFamily: TypographyFamilies.display, fontSize: 38, lineHeight: 42 },
+  subtitle: { fontFamily: TypographyFamilies.sans, fontSize: 13, marginTop: 4 },
+  createBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    borderWidth: 1,
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  createBtnText: { fontFamily: TypographyFamilies.sansSemi, fontSize: 13 },
 
-const SegmentRow = styled.View<{ theme: DefaultTheme }>`
-  flex-direction: row;
-  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.shape_light};
-  border-radius: 10px;
-  padding: 4px;
-  margin: 8px 16px 16px;
-`;
+  // Segmented control
+  segmentTrack: {
+    flexDirection: 'row',
+    borderRadius: 12,
+    padding: 4,
+    marginHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 12,
+  },
+  segmentTab: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 9,
+    borderRadius: 9,
+  },
+  segmentText: {
+    fontFamily: TypographyFamilies.sansSemi,
+    fontSize: 14,
+  },
 
-const SegmentButton = styled(Pressable)<{ active: boolean; theme: DefaultTheme }>`
-  flex: 1;
-  align-items: center;
-  padding: 8px 0;
-  border-radius: 8px;
-  background-color: ${({ active, theme }: { active: boolean; theme: DefaultTheme }) =>
-    active ? theme.colors.primary : 'transparent'};
-`;
+  // Name search
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    gap: 10,
+  },
+  searchInput: {
+    flex: 1,
+    fontFamily: TypographyFamilies.sans,
+    fontSize: 15,
+    padding: 0,
+  },
 
-const SearchRow = styled.View<{ theme: DefaultTheme }>`
-  flex-direction: row;
-  align-items: center;
-  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.white};
-  border-radius: 10px;
-  padding: 10px 12px;
-  margin: 0 16px 8px;
-  border-width: 1px;
-  border-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.shape};
-`;
+  // Hint / empty states
+  hintView: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 48,
+    gap: 12,
+  },
+  hintText: {
+    fontFamily: TypographyFamilies.sans,
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  centeredView: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 32,
+    gap: 12,
+  },
 
-const SearchInput = styled(TextInput)<{ theme: DefaultTheme }>`
-  flex: 1;
-  font-size: 15px;
-  color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.text};
-`;
+  // List
+  listContent: { padding: 16, paddingBottom: 32, gap: 10 },
 
-const HintView = styled.View`
-  align-items: center;
-  justify-content: center;
-  padding: 48px 32px;
-`;
+  // Pool card
+  card: { borderRadius: 16, padding: 16 },
+  cardHeaderRow: { flexDirection: 'row', alignItems: 'center' },
+  cardTitle: {
+    flex: 1,
+    fontFamily: TypographyFamilies.display,
+    fontSize: 22,
+    lineHeight: 26,
+  },
+  cardDesc: {
+    fontFamily: TypographyFamilies.sans,
+    fontSize: 13,
+    marginTop: 4,
+  },
+  cardFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 12,
+  },
+  participantsRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  participantsText: { fontFamily: TypographyFamilies.sansMedium, fontSize: 12 },
+  alreadyInBadge: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  alreadyInText: { fontFamily: TypographyFamilies.sansMedium, fontSize: 12 },
 
-const CenteredView = styled.View`
-  flex: 1;
-  align-items: center;
-  justify-content: center;
-  padding: 32px;
-`;
+  // Code mode
+  codeSection: { flex: 1, paddingHorizontal: 16, gap: 12 },
+  codeInputRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  codeInput: {
+    flex: 1,
+    fontFamily: TypographyFamilies.sansSemi,
+    fontSize: 15,
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
 
-const CardPressable = styled(Pressable)<{ theme: DefaultTheme }>`
-  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.white};
-  border-radius: 12px;
-  padding: 16px;
-`;
-
-const CardHeader = styled.View`
-  flex-direction: row;
-  align-items: center;
-`;
-
-const BadgeRow = styled.View`
-  flex-direction: row;
-  align-items: center;
-  margin-left: 8px;
-`;
-
-const CardFooter = styled.View`
-  flex-direction: row;
-  align-items: center;
-`;
-
-const FooterItem = styled.View`
-  flex-direction: row;
-  align-items: center;
-`;
-
-const JoinButtonWrap = styled.View`
-  margin-left: auto;
-`;
-
-const CodeSection = styled.View`
-  padding: 0 16px;
-  flex: 1;
-`;
-
-const CodeInputRow = styled.View`
-  flex-direction: row;
-  align-items: center;
-`;
-
-const CodeInput = styled(TextInput)<{ theme: DefaultTheme }>`
-  flex: 1;
-  font-size: 15px;
-  color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.text};
-  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.white};
-  border-radius: 10px;
-  padding: 10px 12px;
-  border-width: 1px;
-  border-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.shape};
-`;
-
-const PreviewCard = styled.View<{ theme: DefaultTheme }>`
-  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.white};
-  border-radius: 12px;
-  padding: 16px;
-`;
-
-const PreviewHeader = styled.View`
-  flex-direction: row;
-  align-items: center;
-`;
-
-const StatRow = styled.View`
-  flex-direction: row;
-  align-items: center;
-`;
-
-const InfoBanner = styled.View<{ theme: DefaultTheme }>`
-  flex-direction: row;
-  align-items: center;
-  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.primary_bg};
-  border-radius: 8px;
-  padding: 10px 12px;
-`;
-
-const ErrorBox = styled.View<{ theme: DefaultTheme }>`
-  flex-direction: row;
-  align-items: center;
-  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.negative_light};
-  border-radius: 8px;
-  padding: 10px 12px;
-`;
+  // Error / info banners
+  errorBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 10,
+    borderWidth: 1,
+    padding: 12,
+    gap: 8,
+  },
+  errorText: { fontFamily: TypographyFamilies.sans, fontSize: 13, flex: 1 },
+  infoBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 12,
+    gap: 8,
+  },
+  infoText: { fontFamily: TypographyFamilies.sansMedium, fontSize: 13, flex: 1 },
+});
