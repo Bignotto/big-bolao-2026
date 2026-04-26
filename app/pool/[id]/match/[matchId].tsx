@@ -1,8 +1,18 @@
 import React from 'react';
-import { ActivityIndicator, FlatList, RefreshControl, SafeAreaView } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
-import styled, { type DefaultTheme, useTheme } from 'styled-components/native';
-import { rgba } from 'polished';
+import {
+  ActivityIndicator,
+  FlatList,
+  Image,
+  Pressable,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from 'styled-components/native';
 
 import { useMatch } from '@/hooks/useMatch';
 import { usePool, type ScoringRule } from '@/hooks/usePool';
@@ -13,156 +23,35 @@ import { MatchStage, STAGE_LABELS } from '@/domain/enums/MatchStage';
 import { MatchStatus } from '@/domain/enums/MatchStatus';
 import type { PoolMatchPredictionEntry } from '@/domain/entities/PoolMatchPrediction';
 import AppAvatar from '@/components/AppComponents/AppAvatar';
-import AppText from '@/components/AppComponents/AppText';
-import AppSpacer from '@/components/AppComponents/AppSpacer';
 import AppButton from '@/components/AppComponents/AppButton';
-import { TeamFlag } from '@/components/matches/TeamFlag';
-import { Spaces, BorderRadius } from '@/constants/tokens';
+import { TypographyFamilies } from '@/constants/tokens';
 
-type WithTheme = { theme: DefaultTheme };
-type StatusTagProps = { $status: Match['matchStatus']; theme: DefaultTheme };
-type PointsBadgeProps = { $earned: boolean; theme: DefaultTheme };
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
-const Root = styled(SafeAreaView)`
-  flex: 1;
-  background-color: ${(p: WithTheme) => p.theme.colors.background};
-`;
+const DAYS = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'];
+const MONTHS = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
 
-const CenteredFill = styled.View`
-  flex: 1;
-  align-items: center;
-  justify-content: center;
-  padding-horizontal: ${Spaces.md}px;
-`;
-
-const HeaderContainer = styled.View`
-  background-color: ${(p: WithTheme) => p.theme.colors.primary_dark};
-  padding-vertical: ${Spaces.lg}px;
-  padding-horizontal: ${Spaces.md}px;
-  align-items: center;
-`;
-
-const TeamRow = styled.View`
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-`;
-
-const TeamCol = styled.View`
-  flex: 1;
-  align-items: center;
-`;
-
-const StatusTag = styled.View<{ $status: Match['matchStatus'] }>`
-  flex-direction: row;
-  align-items: center;
-  gap: ${Spaces.xsm}px;
-  border-radius: 99px;
-  padding: ${Spaces.xsm}px ${Spaces.sm}px;
-  background-color: ${(p: StatusTagProps) => {
-    if (p.$status === 'IN_PROGRESS') return rgba(p.theme.colors.positive, 0.2);
-    if (p.$status === 'POSTPONED') return rgba(p.theme.colors.negative, 0.2);
-    return rgba(p.theme.colors.white, 0.12);
-  }};
-`;
-
-const RedDot = styled.View`
-  width: 7px;
-  height: 7px;
-  border-radius: 4px;
-  background-color: ${(p: WithTheme) => p.theme.colors.negative};
-`;
-
-const SectionTitle = styled.View`
-  padding-horizontal: ${Spaces.md}px;
-  padding-top: ${Spaces.md}px;
-  padding-bottom: ${Spaces.sm}px;
-`;
-
-const PredictionRow = styled.View`
-  flex-direction: row;
-  align-items: center;
-  background-color: ${(p: WithTheme) => p.theme.colors.white};
-  border-radius: ${BorderRadius.md}px;
-  padding: ${Spaces.md}px;
-`;
-
-const ParticipantInfo = styled.View`
-  flex: 1;
-  margin-left: ${Spaces.sm}px;
-  margin-right: ${Spaces.sm}px;
-`;
-
-const PredictionScore = styled.View`
-  align-items: flex-end;
-`;
-
-const PointsBadge = styled.View<{ $earned: boolean }>`
-  background-color: ${(p: PointsBadgeProps) =>
-    p.$earned ? rgba(p.theme.colors.positive, 0.15) : rgba(p.theme.colors.border, 0.3)};
-  border-radius: ${BorderRadius.sm}px;
-  padding: ${Spaces.xsm}px ${Spaces.sm}px;
-  margin-top: ${Spaces.xsm}px;
-`;
-
-const LIST_CONTENT = {
-  paddingHorizontal: Spaces.md,
-  paddingBottom: Spaces.xlg,
-  flexGrow: 1,
-} as const;
-
-function formatMatchDatetime(isoString: string): string {
-  const date = new Date(isoString);
-  const weekday = new Intl.DateTimeFormat('pt-BR', {
-    weekday: 'short',
-    timeZone: 'America/Sao_Paulo',
-  }).format(date);
-  const dayMonth = new Intl.DateTimeFormat('pt-BR', {
-    day: '2-digit',
-    month: '2-digit',
-    timeZone: 'America/Sao_Paulo',
-  }).format(date);
-  const time = new Intl.DateTimeFormat('pt-BR', {
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: 'America/Sao_Paulo',
-    hour12: false,
-  }).format(date);
-  return `${weekday.replace(/\.$/, '')}, ${dayMonth} · ${time}`;
-}
-
-function metadataLine(match: Match): string {
-  const parts = [STAGE_LABELS[match.stage as MatchStage] ?? match.stage];
-  if (match.stage === MatchStage.GROUP && match.group) {
-    parts.push(`Grupo ${match.group}`);
-  }
-  return parts.join(' · ');
+function formatEyebrow(match: Match): string {
+  const stagePart = match.group
+    ? `GRUPO ${match.group}`
+    : (STAGE_LABELS[match.stage as MatchStage] ?? match.stage).toUpperCase();
+  if (match.matchStatus === MatchStatus.IN_PROGRESS) return `${stagePart}  ·  AO VIVO`;
+  const dt = new Date(match.matchDatetime);
+  const day = DAYS[dt.getDay()];
+  const date = `${String(dt.getDate()).padStart(2, '0')} ${MONTHS[dt.getMonth()]}`;
+  return `${stagePart}  ·  ${day} ${date}`;
 }
 
 function statusLabel(status: Match['matchStatus']): string {
-  if (status === MatchStatus.IN_PROGRESS) return 'Ao vivo';
-  if (status === MatchStatus.COMPLETED) return 'Encerrado';
-  if (status === MatchStatus.POSTPONED) return 'Adiado';
-  return 'Agendado';
+  if (status === MatchStatus.IN_PROGRESS) return 'AO VIVO';
+  if (status === MatchStatus.COMPLETED) return 'ENCERRADO';
+  if (status === MatchStatus.POSTPONED) return 'ADIADO';
+  return 'AGENDADO';
 }
 
-function resultLabel(match: Match): string {
-  if (
-    (match.matchStatus === MatchStatus.IN_PROGRESS ||
-      match.matchStatus === MatchStatus.COMPLETED) &&
-    match.homeTeamScore != null &&
-    match.awayTeamScore != null
-  ) {
-    return `${match.homeTeamScore} : ${match.awayTeamScore}`;
-  }
-
-  return 'VS';
-}
-
-function scoreOutcome(homeScore: number, awayScore: number): 'HOME' | 'AWAY' | 'DRAW' {
-  if (homeScore > awayScore) return 'HOME';
-  if (awayScore > homeScore) return 'AWAY';
+function scoreOutcome(home: number, away: number): 'HOME' | 'AWAY' | 'DRAW' {
+  if (home > away) return 'HOME';
+  if (away > home) return 'AWAY';
   return 'DRAW';
 }
 
@@ -172,122 +61,139 @@ function phaseMultiplier(match: Match, rules: ScoringRule): number {
   return 1;
 }
 
-function formatPoints(points: number | null): string {
-  if (points == null) return 'Em apuração';
-  return `+${Number.isInteger(points) ? points : points.toFixed(1)} pts`;
-}
-
-function calculatePredictionPoints(
+function calculatePoints(
   entry: PoolMatchPredictionEntry,
   match: Match,
   rules: ScoringRule | null | undefined,
 ): number | null {
-  const prediction = entry.prediction;
-  if (!prediction) return 0;
-  if (prediction.pointsEarned != null) return prediction.pointsEarned;
+  const p = entry.prediction;
+  if (!p) return 0;
+  if (p.pointsEarned != null) return p.pointsEarned;
   if (match.homeTeamScore == null || match.awayTeamScore == null || !rules) return null;
 
-  const actualHome = match.homeTeamScore;
-  const actualAway = match.awayTeamScore;
-  const predictedHome = prediction.predictedHomeScore;
-  const predictedAway = prediction.predictedAwayScore;
+  const aH = match.homeTeamScore;
+  const aA = match.awayTeamScore;
+  const pH = p.predictedHomeScore;
+  const pA = p.predictedAwayScore;
 
-  let basePoints = 0;
-  if (predictedHome === actualHome && predictedAway === actualAway) {
-    basePoints = rules.exactScorePoints;
-  } else {
-    const actualOutcome = scoreOutcome(actualHome, actualAway);
-    const predictedOutcome = scoreOutcome(predictedHome, predictedAway);
-
-    if (actualOutcome === predictedOutcome) {
-      if (actualOutcome === 'DRAW') {
-        basePoints = rules.correctDrawPoints;
-      } else if (predictedHome - predictedAway === actualHome - actualAway) {
-        basePoints = rules.correctWinnerGoalDiffPoints;
-      } else {
-        basePoints = rules.correctWinnerPoints;
-      }
-    }
+  if (pH === aH && pA === aA) return rules.exactScorePoints * phaseMultiplier(match, rules);
+  if (scoreOutcome(pH, pA) === scoreOutcome(aH, aA)) {
+    const base =
+      scoreOutcome(aH, aA) === 'DRAW'
+        ? rules.correctDrawPoints
+        : pH - pA === aH - aA
+          ? rules.correctWinnerGoalDiffPoints
+          : rules.correctWinnerPoints;
+    return base * phaseMultiplier(match, rules);
   }
-
-  return basePoints * phaseMultiplier(match, rules);
+  return 0;
 }
 
-function MatchPredictionHeader({ match }: { match: Match }) {
-  const { colors } = useTheme();
+// ── Match header ──────────────────────────────────────────────────────────────
+
+function MatchHeader({ match }: { match: Match }) {
+  const theme = useTheme();
+  const isLive = match.matchStatus === MatchStatus.IN_PROGRESS;
+  const isDone = match.matchStatus === MatchStatus.COMPLETED;
+  const hasScore = match.homeTeamScore != null && match.awayTeamScore != null;
+  const showScore = (isLive || isDone) && hasScore;
+
+  let homeScoreColor = theme.colors.ink100;
+  let awayScoreColor = theme.colors.ink100;
+  if (showScore) {
+    if (match.homeTeamScore! > match.awayTeamScore!) awayScoreColor = theme.colors.ink600;
+    else if (match.awayTeamScore! > match.homeTeamScore!) homeScoreColor = theme.colors.ink600;
+  }
 
   return (
-    <HeaderContainer>
-      <AppText size="xsm" color={colors.text_gray} align="center">
-        {metadataLine(match).toUpperCase()}
-      </AppText>
+    <View style={[s.matchPanel, { backgroundColor: theme.colors.ink900 }]}>
+      {/* Eyebrow */}
+      <View style={s.eyebrowRow}>
+        {isLive && (
+          <View style={[s.liveDot, { backgroundColor: theme.colors.signalLive }]} />
+        )}
+        <Text style={[s.eyebrow, { color: isLive ? theme.colors.pitch : theme.colors.ink500 }]}>
+          {formatEyebrow(match)}
+        </Text>
+      </View>
 
-      <AppSpacer verticalSpace="sm" />
+      {/* Home team */}
+      <View style={s.teamRow}>
+        {match.homeTeam.flagUrl ? (
+          <Image source={{ uri: match.homeTeam.flagUrl }} style={s.flag} />
+        ) : (
+          <View style={[s.flag, s.flagFallback, { backgroundColor: theme.colors.ink800 }]} />
+        )}
+        <Text style={[s.teamName, { color: theme.colors.ink100 }]} numberOfLines={1}>
+          {match.homeTeam.name}
+        </Text>
+        {showScore && (
+          <Text style={[s.teamScore, { color: homeScoreColor }]}>
+            {match.homeTeamScore}
+          </Text>
+        )}
+      </View>
 
-      <TeamRow>
-        <TeamCol>
-          <TeamFlag flagUrl={match.homeTeam.flagUrl} teamName={match.homeTeam.name} size="lg" />
-          <AppSpacer verticalSpace="xsm" />
-          <AppText bold size="md" align="center" color={colors.white}>
-            {match.homeTeam.countryCode ?? match.homeTeam.name}
-          </AppText>
-        </TeamCol>
+      {/* Divider */}
+      <View style={[s.teamDivider, { backgroundColor: theme.colors.ink800 }]} />
 
-        <TeamCol>
-          <AppText
-            bold
-            size={
-              match.matchStatus === MatchStatus.IN_PROGRESS ||
-              match.matchStatus === MatchStatus.COMPLETED
-                ? 'xlg'
-                : 'lg'
-            }
-            color={
-              match.matchStatus === MatchStatus.IN_PROGRESS ||
-              match.matchStatus === MatchStatus.COMPLETED
-                ? colors.white
-                : colors.text_gray
-            }
-          >
-            {resultLabel(match)}
-          </AppText>
-          <AppText size="xsm" color={colors.text_gray} align="center">
-            {formatMatchDatetime(match.matchDatetime)}
-          </AppText>
-        </TeamCol>
+      {/* Away team */}
+      <View style={s.teamRow}>
+        {match.awayTeam.flagUrl ? (
+          <Image source={{ uri: match.awayTeam.flagUrl }} style={s.flag} />
+        ) : (
+          <View style={[s.flag, s.flagFallback, { backgroundColor: theme.colors.ink800 }]} />
+        )}
+        <Text style={[s.teamName, { color: theme.colors.ink100 }]} numberOfLines={1}>
+          {match.awayTeam.name}
+        </Text>
+        {showScore && (
+          <Text style={[s.teamScore, { color: awayScoreColor }]}>
+            {match.awayTeamScore}
+          </Text>
+        )}
+      </View>
 
-        <TeamCol>
-          <TeamFlag flagUrl={match.awayTeam.flagUrl} teamName={match.awayTeam.name} size="lg" />
-          <AppSpacer verticalSpace="xsm" />
-          <AppText bold size="md" align="center" color={colors.white}>
-            {match.awayTeam.countryCode ?? match.awayTeam.name}
-          </AppText>
-        </TeamCol>
-      </TeamRow>
-
-      <AppSpacer verticalSpace="sm" />
-
-      <StatusTag $status={match.matchStatus}>
-        {match.matchStatus === MatchStatus.IN_PROGRESS && <RedDot />}
-        <AppText
-          size="sm"
-          bold={match.matchStatus === MatchStatus.IN_PROGRESS}
-          color={
-            match.matchStatus === MatchStatus.IN_PROGRESS
-              ? colors.positive
-              : match.matchStatus === MatchStatus.POSTPONED
-                ? colors.negative
-                : colors.text_gray
-          }
+      {/* Venue + status row */}
+      <View style={[s.footerRow, { borderTopColor: theme.colors.ink800 }]}>
+        {match.stadium && (
+          <View style={s.stadiumRow}>
+            <Ionicons name="location-outline" size={12} color={theme.colors.ink500} />
+            <Text style={[s.stadiumText, { color: theme.colors.ink500 }]}>
+              {match.stadium}
+            </Text>
+          </View>
+        )}
+        <View
+          style={[
+            s.statusPill,
+            {
+              backgroundColor: isLive
+                ? `rgba(255,90,95,0.12)`
+                : `rgba(255,255,255,0.06)`,
+            },
+          ]}
         >
-          {statusLabel(match.matchStatus)}
-        </AppText>
-      </StatusTag>
-    </HeaderContainer>
+          {isLive && (
+            <View style={[s.liveDotSmall, { backgroundColor: theme.colors.signalLive }]} />
+          )}
+          <Text
+            style={[
+              s.statusText,
+              { color: isLive ? theme.colors.signalLive : theme.colors.ink500 },
+            ]}
+          >
+            {statusLabel(match.matchStatus)}
+          </Text>
+        </View>
+      </View>
+    </View>
   );
 }
 
-function PredictionListRow({
+// ── Prediction row ────────────────────────────────────────────────────────────
+
+function PredictionRow({
   entry,
   match,
   points,
@@ -296,61 +202,75 @@ function PredictionListRow({
   match: Match;
   points: number | null;
 }) {
-  const { colors } = useTheme();
-  const prediction = entry.prediction;
-  const hasPrediction = prediction != null;
+  const theme = useTheme();
+  const pred = entry.prediction;
+  const hasPred = pred != null;
   const name = entry.user.fullName || 'Participante';
   const earned = points != null && points > 0;
+  const isDoneOrLive =
+    match.matchStatus === MatchStatus.COMPLETED ||
+    match.matchStatus === MatchStatus.IN_PROGRESS;
 
   return (
-    <PredictionRow>
+    <View style={[s.predRow, { backgroundColor: theme.colors.ink850 }]}>
+      {/* Avatar + name */}
       <AppAvatar imagePath={entry.user.profileImageUrl ?? undefined} name={name} size={40} />
-      <ParticipantInfo>
-        <AppText bold size="sm" numberOfLines={1}>
+      <View style={s.predInfo}>
+        <Text style={[s.predName, { color: theme.colors.ink100 }]} numberOfLines={1}>
           {name}
-        </AppText>
-        {entry.rank != null ? (
-          <AppText size="xsm" color={colors.text_gray}>
-            {entry.rank}º lugar
-          </AppText>
-        ) : (
-          <AppText size="xsm" color={colors.text_gray}>
-            Sem ranking
-          </AppText>
-        )}
-      </ParticipantInfo>
+        </Text>
+        <Text style={[s.predRank, { color: theme.colors.ink500 }]}>
+          {entry.rank != null ? `${entry.rank}º lugar` : 'Sem ranking'}
+        </Text>
+      </View>
 
-      <PredictionScore>
-        <AppText
-          bold={hasPrediction}
-          size={hasPrediction ? 'lg' : 'md'}
-          color={hasPrediction ? colors.text : colors.text_disabled}
-          align="right"
+      {/* Score + badge */}
+      <View style={s.predRight}>
+        <Text
+          style={[
+            s.predScore,
+            { color: hasPred ? theme.colors.pitch : theme.colors.ink600 },
+          ]}
         >
-          {hasPrediction
-            ? `${prediction.predictedHomeScore} : ${prediction.predictedAwayScore}`
+          {hasPred
+            ? `${pred.predictedHomeScore}–${pred.predictedAwayScore}`
             : '—'}
-        </AppText>
-
-        {match.matchStatus === MatchStatus.COMPLETED ||
-        match.matchStatus === MatchStatus.IN_PROGRESS ? (
-          <PointsBadge $earned={earned}>
-            <AppText bold size="xsm" color={earned ? colors.positive : colors.text_gray}>
-              {formatPoints(points)}
-            </AppText>
-          </PointsBadge>
+        </Text>
+        {isDoneOrLive ? (
+          <View
+            style={[
+              s.pointsBadge,
+              {
+                backgroundColor: earned
+                  ? `rgba(74,222,128,0.12)`
+                  : theme.colors.ink800,
+              },
+            ]}
+          >
+            <Text
+              style={[
+                s.pointsText,
+                { color: earned ? theme.colors.signalWin : theme.colors.ink500 },
+              ]}
+            >
+              {points == null ? 'apurando' : `+${points} pts`}
+            </Text>
+          </View>
         ) : (
-          <AppText size="xsm" color={colors.text_gray} align="right">
-            {hasPrediction ? 'Aguardando...' : 'Sem palpite'}
-          </AppText>
+          <Text style={[s.predPending, { color: theme.colors.ink600 }]}>
+            {hasPred ? 'aguardando' : 'sem palpite'}
+          </Text>
         )}
-      </PredictionScore>
-    </PredictionRow>
+      </View>
+    </View>
   );
 }
 
+// ── Screen ────────────────────────────────────────────────────────────────────
+
 export default function PoolMatchPredictionsScreen() {
   const theme = useTheme();
+  const router = useRouter();
   const { id, matchId: matchIdParam } = useLocalSearchParams<{
     id: string;
     matchId: string;
@@ -358,6 +278,7 @@ export default function PoolMatchPredictionsScreen() {
 
   const poolId = id ? Number(id) : undefined;
   const matchId = matchIdParam ? Number(matchIdParam) : undefined;
+
   const { data: match, isLoading: matchLoading, isError, refetch } = useMatch(matchId);
   const { pool } = usePool(poolId);
   const { members } = usePoolMembers(poolId);
@@ -371,9 +292,7 @@ export default function PoolMatchPredictionsScreen() {
 
   const membersById = React.useMemo(() => {
     const map = new Map<string, (typeof members)[number]>();
-    for (const member of members) {
-      map.set(member.id, member);
-    }
+    for (const m of members) map.set(m.id, m);
     return map;
   }, [members]);
 
@@ -382,7 +301,6 @@ export default function PoolMatchPredictionsScreen() {
       predictions.map((entry) => {
         const member = membersById.get(entry.userId) ?? membersById.get(entry.user.id);
         if (!member) return entry;
-
         return {
           ...entry,
           user: {
@@ -400,76 +318,331 @@ export default function PoolMatchPredictionsScreen() {
 
   const isInitialLoading = (matchLoading && !match) || predictionsLoading;
 
+  // ── Loading ──────────────────────────────────────────────────────────────────
+
   if (isInitialLoading) {
     return (
-      <Root>
-        <CenteredFill>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
-        </CenteredFill>
-      </Root>
+      <SafeAreaView
+        style={[s.root, { backgroundColor: theme.colors.ink950 }]}
+        edges={['top']}
+      >
+        <View style={s.centered}>
+          <ActivityIndicator size="large" color={theme.colors.pitch} />
+        </View>
+      </SafeAreaView>
     );
   }
 
   if (isError || !match) {
     return (
-      <Root>
-        <CenteredFill>
-          <AppText size="sm" color={theme.colors.text_gray} align="center">
+      <SafeAreaView
+        style={[s.root, { backgroundColor: theme.colors.ink950 }]}
+        edges={['top']}
+      >
+        <View style={s.centered}>
+          <Text style={[s.emptyText, { color: theme.colors.ink500 }]}>
             Não foi possível carregar o jogo.
-          </AppText>
-          <AppSpacer verticalSpace="md" />
-          <AppButton title="Tentar novamente" variant="transparent" onPress={() => refetch()} />
-        </CenteredFill>
-      </Root>
+          </Text>
+          <View style={{ height: 16 }} />
+          <AppButton title="Tentar novamente" variant="ghost" onPress={() => refetch()} />
+        </View>
+      </SafeAreaView>
     );
   }
 
-  return (
-    <Root>
-      <MatchPredictionHeader match={match} />
+  // ── Render ───────────────────────────────────────────────────────────────────
 
-      <SectionTitle>
-        <AppText size="xsm" color={theme.colors.text_gray}>
-          PARTICIPANTES
-        </AppText>
-        {predictionsError != null && (
-          <>
-            <AppSpacer verticalSpace="xsm" />
-            <AppText size="sm" color={theme.colors.negative}>
-              {predictionsError}
-            </AppText>
-          </>
-        )}
-      </SectionTitle>
+  return (
+    <SafeAreaView
+      style={[s.root, { backgroundColor: theme.colors.ink950 }]}
+      edges={['top']}
+    >
+      {/* Nav row */}
+      <View style={s.navRow}>
+        <Pressable
+          onPress={() => router.back()}
+          style={[s.circleBtn, { backgroundColor: theme.colors.ink800 }]}
+        >
+          <Ionicons name="chevron-back" size={20} color={theme.colors.ink300} />
+        </Pressable>
+        <Text style={[s.navTitle, { color: theme.colors.ink500 }]}>
+          PALPITES DO GRUPO
+        </Text>
+        <View style={s.circleBtn} />
+      </View>
 
       <FlatList<PoolMatchPredictionEntry>
         data={displayPredictions}
         keyExtractor={(item) => item.userId}
-        contentContainerStyle={LIST_CONTENT}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={[
+          s.listContent,
+          displayPredictions.length === 0 && s.listContentEmpty,
+        ]}
         refreshControl={
           <RefreshControl
             refreshing={predictionsFetching}
             onRefresh={refresh}
-            colors={[theme.colors.primary]}
-            tintColor={theme.colors.primary}
+            tintColor={theme.colors.pitch}
           />
         }
-        ItemSeparatorComponent={() => <AppSpacer verticalSpace="xsm" />}
-        ListEmptyComponent={
-          <CenteredFill>
-            <AppText size="sm" color={theme.colors.text_gray} align="center">
-              Nenhum participante encontrado.
-            </AppText>
-          </CenteredFill>
+        ListHeaderComponent={
+          <>
+            <MatchHeader match={match} />
+
+            {predictionsError != null && (
+              <Text style={[s.errorText, { color: theme.colors.signalLose }]}>
+                {predictionsError}
+              </Text>
+            )}
+
+            <View style={s.sectionRow}>
+              <Text style={[s.sectionLabel, { color: theme.colors.ink500 }]}>
+                PARTICIPANTES
+              </Text>
+              {displayPredictions.length > 0 && (
+                <>
+                  <View style={[s.sectionLine, { backgroundColor: theme.colors.ink800 }]} />
+                  <Text style={[s.sectionLabel, { color: theme.colors.ink600 }]}>
+                    {displayPredictions.length}
+                  </Text>
+                </>
+              )}
+            </View>
+          </>
         }
+        ListEmptyComponent={
+          <View style={s.centered}>
+            <Text style={[s.emptyText, { color: theme.colors.ink500 }]}>
+              Nenhum participante encontrado.
+            </Text>
+          </View>
+        }
+        ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
         renderItem={({ item }) => (
-          <PredictionListRow
+          <PredictionRow
             entry={item}
             match={match}
-            points={calculatePredictionPoints(item, match, pool?.scoringRules)}
+            points={calculatePoints(item, match, pool?.scoringRules)}
           />
         )}
       />
-    </Root>
+    </SafeAreaView>
   );
 }
+
+// ── Styles ────────────────────────────────────────────────────────────────────
+
+const s = StyleSheet.create({
+  root: { flex: 1 },
+  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
+
+  // Nav
+  navRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+  },
+  circleBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  navTitle: {
+    fontFamily: TypographyFamilies.mono,
+    fontSize: 11,
+    letterSpacing: 0.8,
+    includeFontPadding: false,
+  },
+
+  // Match panel
+  matchPanel: {
+    borderRadius: 20,
+    padding: 20,
+    marginHorizontal: 16,
+    marginBottom: 24,
+  },
+  eyebrowRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 14,
+    gap: 7,
+  },
+  eyebrow: {
+    fontFamily: TypographyFamilies.mono,
+    fontSize: 11,
+    letterSpacing: 1,
+    includeFontPadding: false,
+  },
+  liveDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  teamRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+  },
+  flag: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    marginRight: 14,
+  },
+  flagFallback: {},
+  teamName: {
+    flex: 1,
+    fontFamily: TypographyFamilies.sansSemi,
+    fontSize: 18,
+    includeFontPadding: false,
+  },
+  teamScore: {
+    fontFamily: TypographyFamilies.display,
+    fontSize: 28,
+    letterSpacing: -0.5,
+    includeFontPadding: false,
+    minWidth: 28,
+    textAlign: 'right',
+  },
+  teamDivider: {
+    height: 1,
+    marginHorizontal: 58,
+  },
+  footerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 14,
+    paddingTop: 14,
+    borderTopWidth: 1,
+  },
+  stadiumRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 5,
+    marginRight: 8,
+  },
+  stadiumText: {
+    fontFamily: TypographyFamilies.sans,
+    fontSize: 12,
+    includeFontPadding: false,
+    flexShrink: 1,
+  },
+  statusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 100,
+  },
+  liveDotSmall: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+  },
+  statusText: {
+    fontFamily: TypographyFamilies.mono,
+    fontSize: 10,
+    letterSpacing: 0.5,
+    includeFontPadding: false,
+  },
+
+  // List
+  listContent: {
+    paddingBottom: 40,
+  },
+  listContentEmpty: {
+    flexGrow: 1,
+  },
+
+  // Section header
+  sectionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 16,
+    marginBottom: 10,
+  },
+  sectionLabel: {
+    fontFamily: TypographyFamilies.mono,
+    fontSize: 10,
+    letterSpacing: 0.8,
+    includeFontPadding: false,
+  },
+  sectionLine: { flex: 1, height: 1 },
+
+  // Prediction row
+  predRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 16,
+    borderRadius: 16,
+    padding: 14,
+  },
+  predInfo: {
+    flex: 1,
+    marginLeft: 12,
+    marginRight: 12,
+  },
+  predName: {
+    fontFamily: TypographyFamilies.sansSemi,
+    fontSize: 15,
+    includeFontPadding: false,
+  },
+  predRank: {
+    fontFamily: TypographyFamilies.mono,
+    fontSize: 10,
+    letterSpacing: 0.3,
+    includeFontPadding: false,
+    marginTop: 2,
+  },
+  predRight: {
+    alignItems: 'flex-end',
+    gap: 4,
+  },
+  predScore: {
+    fontFamily: TypographyFamilies.display,
+    fontSize: 22,
+    letterSpacing: -0.5,
+    includeFontPadding: false,
+  },
+  pointsBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 100,
+  },
+  pointsText: {
+    fontFamily: TypographyFamilies.mono,
+    fontSize: 10,
+    includeFontPadding: false,
+  },
+  predPending: {
+    fontFamily: TypographyFamilies.mono,
+    fontSize: 10,
+    includeFontPadding: false,
+  },
+
+  // Error / empty
+  errorText: {
+    fontFamily: TypographyFamilies.sans,
+    fontSize: 13,
+    textAlign: 'center',
+    paddingHorizontal: 16,
+    marginBottom: 12,
+    includeFontPadding: false,
+  },
+  emptyText: {
+    fontFamily: TypographyFamilies.sans,
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 22,
+    includeFontPadding: false,
+  },
+});
