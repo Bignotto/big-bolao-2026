@@ -24,6 +24,7 @@ import { useLeavePool } from '@/hooks/useLeavePool';
 import { useSession } from '@/context/SessionContext';
 import type { Match } from '@/domain/entities/Match';
 import { MatchStage } from '@/domain/enums/MatchStage';
+import { MatchStatus } from '@/domain/enums/MatchStatus';
 import type { Prediction } from '@/domain/entities/Prediction';
 import {
   filterByDate,
@@ -107,6 +108,49 @@ function TabBar({
   );
 }
 
+// ─── Round section header ─────────────────────────────────────────────────────
+
+function RoundSectionHeader({
+  title,
+  done,
+  total,
+  pts,
+  allScheduled,
+}: {
+  title: string;
+  done: number;
+  total: number;
+  pts: number;
+  allScheduled: boolean;
+}) {
+  const theme = useTheme();
+  return (
+    <View style={[s.sectionHeader, { backgroundColor: theme.colors.background }]}>
+      <Text style={[s.sectionTitle, { color: theme.colors.ink400 }]}>
+        {title.toUpperCase()}
+      </Text>
+      <View style={[s.sectionLine, { backgroundColor: theme.colors.ink800 }]} />
+      <View style={s.sectionRight}>
+        {allScheduled ? (
+          <>
+            <View style={[s.amberDot, { backgroundColor: theme.colors.signalAmber }]} />
+            <Text style={[s.sectionStat, { color: theme.colors.signalAmber }]}>ABERTO</Text>
+          </>
+        ) : (
+          <Text
+            style={[
+              s.sectionStat,
+              { color: pts > 0 ? theme.colors.pitch : theme.colors.ink500 },
+            ]}
+          >
+            {done}/{total} · +{pts} pts
+          </Text>
+        )}
+      </View>
+    </View>
+  );
+}
+
 // ─── Predictions panel ────────────────────────────────────────────────────────
 
 function PredictionMatchPanel({
@@ -141,14 +185,45 @@ function PredictionMatchPanel({
 
   const sections = useMemo(() => {
     if (isGroupChip(selectedChip)) {
-      return groupByRound(filterByGroup(matches, selectedChip)).map(({ round, matches: ms }) => ({
-        title: `Grupo ${selectedChip} · Rodada ${round}`,
-        data: ms,
-      }));
+      return groupByRound(filterByGroup(matches, selectedChip)).map(({ round, matches: ms }) => {
+        const done = ms.filter((m) => {
+          const pred = predictionMap.get(m.id);
+          return pred != null && m.matchStatus === MatchStatus.COMPLETED;
+        }).length;
+        const pts = ms.reduce((sum, m) => {
+          const pred = predictionMap.get(m.id);
+          return sum + (pred?.pointsEarned ?? 0);
+        }, 0);
+        const allScheduled = ms.every(
+          (m) =>
+            m.matchStatus === MatchStatus.SCHEDULED ||
+            m.matchStatus === MatchStatus.POSTPONED,
+        );
+        return {
+          title: `Grupo ${selectedChip} · Rodada ${round}`,
+          data: ms,
+          done,
+          total: ms.length,
+          pts,
+          allScheduled,
+        };
+      });
     }
     const stage = selectedChip as MatchStage;
-    return [{ title: stage, data: filterByStage(matches, stage) }];
-  }, [matches, selectedChip]);
+    const ms = filterByStage(matches, stage);
+    return [{
+      title: stage,
+      data: ms,
+      done: 0,
+      total: ms.length,
+      pts: 0,
+      allScheduled: ms.every(
+        (m) =>
+          m.matchStatus === MatchStatus.SCHEDULED ||
+          m.matchStatus === MatchStatus.POSTPONED,
+      ),
+    }];
+  }, [matches, selectedChip, predictionMap]);
 
   const dateMatches = useMemo(
     () => filterByDate(matches, effectiveDate),
@@ -191,12 +266,13 @@ function PredictionMatchPanel({
           refreshControl={refreshControl}
           ListEmptyComponent={empty}
           renderSectionHeader={({ section }) => (
-            <View style={[s.sectionHeader, { backgroundColor: theme.colors.background }]}>
-              <Text style={[s.sectionTitle, { color: theme.colors.ink500 }]}>
-                {section.title.toUpperCase()}
-              </Text>
-              <View style={[s.sectionLine, { backgroundColor: theme.colors.ink800 }]} />
-            </View>
+            <RoundSectionHeader
+              title={section.title}
+              done={section.done}
+              total={section.total}
+              pts={section.pts}
+              allScheduled={section.allScheduled}
+            />
           )}
           renderItem={({ item }) => (
             <MatchCard
@@ -433,14 +509,18 @@ export default function PoolDetailsScreen() {
           >
             <Ionicons name="chevron-back" size={18} color={theme.colors.ink300} />
           </Pressable>
-          <View style={{ flex: 1 }} />
-          {pool.isCreator && (
+          <Text style={[s.navEyebrow, { color: theme.colors.ink500 }]}>
+            DETALHES DO GRUPO
+          </Text>
+          {pool.isCreator ? (
             <Pressable
               onPress={() => router.push(`/pool/${id}/settings`)}
               style={[s.navBtn, { backgroundColor: theme.colors.ink800 }]}
             >
-              <Ionicons name="settings-outline" size={16} color={theme.colors.ink300} />
+              <Ionicons name="menu-outline" size={18} color={theme.colors.ink300} />
             </Pressable>
+          ) : (
+            <View style={s.navBtn} />
           )}
         </View>
 
@@ -647,6 +727,14 @@ const s = StyleSheet.create({
     width: 32, height: 32, borderRadius: 16,
     alignItems: 'center', justifyContent: 'center',
   },
+  navEyebrow: {
+    flex: 1,
+    fontFamily: TypographyFamilies.mono,
+    fontSize: 11,
+    letterSpacing: 0.8,
+    textAlign: 'center',
+    includeFontPadding: false,
+  },
   heroEyebrow: {
     fontFamily: TypographyFamilies.mono,
     fontSize: 10,
@@ -732,6 +820,22 @@ const s = StyleSheet.create({
     includeFontPadding: false,
   },
   sectionLine: { flex: 1, height: 1 },
+  sectionRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  amberDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+  },
+  sectionStat: {
+    fontFamily: TypographyFamilies.mono,
+    fontSize: 10,
+    letterSpacing: 0.4,
+    includeFontPadding: false,
+  },
   standingsFooter: { padding: 20 },
   updatedTxt: {
     fontFamily: TypographyFamilies.mono,
