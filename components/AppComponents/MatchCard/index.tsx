@@ -69,21 +69,31 @@ function TeamRow({
   team,
   score,
   scoreColor,
+  nameColor,
+  bold,
 }: {
   team: Team;
   score: number | null;
   scoreColor: string;
+  nameColor: string;
+  bold?: boolean;
 }) {
-  const theme = useTheme();
   return (
     <View style={styles.teamRow}>
       <Flag flagUrl={team.flagUrl} countryCode={team.countryCode} />
-      <Text style={[styles.teamName, { color: theme.colors.ink100 }]} numberOfLines={1}>
+      <Text
+        style={[
+          styles.teamName,
+          { color: nameColor },
+          bold && { fontFamily: TypographyFamilies.sansSemi },
+        ]}
+        numberOfLines={1}
+      >
         {team.countryCode ?? team.name}
       </Text>
-      {score != null && (
-        <Text style={[styles.scoreNum, { color: scoreColor }]}>{score}</Text>
-      )}
+      <Text style={[styles.scoreNum, { color: scoreColor }]}>
+        {score != null ? score : '·'}
+      </Text>
     </View>
   );
 }
@@ -92,22 +102,26 @@ function TeamRow({
 
 type ChipProps = {
   label: string;
+  score?: string;
+  pts?: string;
   bg: string;
   borderColor: string;
   textColor: string;
+  scoreColor?: string;
   dashed?: boolean;
-  showPencil?: boolean;
   showDot?: boolean;
   dotColor?: string;
 };
 
 function PredictionChip({
   label,
+  score,
+  pts,
   bg,
   borderColor,
   textColor,
+  scoreColor,
   dashed,
-  showPencil,
   showDot,
   dotColor,
 }: ChipProps) {
@@ -118,13 +132,20 @@ function PredictionChip({
         { backgroundColor: bg, borderColor, borderStyle: dashed ? 'dashed' : 'solid' },
       ]}
     >
-      {showDot && dotColor && <LiveDot color={dotColor} />}
-      {showPencil && (
-        <Text style={[styles.chipText, { color: textColor, fontSize: 10, marginRight: 1 }]}>
-          ✎
-        </Text>
+      <View style={styles.chipLabelRow}>
+        {showDot && dotColor && (
+          <View style={styles.chipDotWrap}>
+            <LiveDot color={dotColor} />
+          </View>
+        )}
+        <Text style={[styles.chipLabel, { color: textColor }]}>{label}</Text>
+      </View>
+      {score != null && (
+        <Text style={[styles.chipScore, { color: scoreColor ?? textColor }]}>{score}</Text>
       )}
-      <Text style={[styles.chipText, { color: textColor }]}>{label}</Text>
+      {pts != null && (
+        <Text style={[styles.chipPts, { color: textColor }]}>{pts}</Text>
+      )}
     </View>
   );
 }
@@ -142,12 +163,36 @@ export default function MatchCard({ match, poolContext, showBorder = true }: Mat
     matchStatus === MatchStatus.SCHEDULED || matchStatus === MatchStatus.POSTPONED;
   const hasScore = homeTeamScore != null && awayTeamScore != null;
 
-  // Losing team's score rendered in muted color
-  let homeScoreColor = theme.colors.ink100;
-  let awayScoreColor = theme.colors.ink100;
+  // Score and name colors: winner = ink100 bold, loser = ink600 muted
+  let homeScoreColor = theme.colors.ink600;
+  let awayScoreColor = theme.colors.ink600;
+  let homeNameColor = theme.colors.ink400;
+  let awayNameColor = theme.colors.ink400;
+  let homeWinner = false;
+  let awayWinner = false;
+
   if (hasScore) {
-    if (homeTeamScore! > awayTeamScore!) awayScoreColor = theme.colors.ink400;
-    else if (awayTeamScore! > homeTeamScore!) homeScoreColor = theme.colors.ink400;
+    if (homeTeamScore! > awayTeamScore!) {
+      homeScoreColor = theme.colors.ink100;
+      homeNameColor = theme.colors.ink100;
+      homeWinner = true;
+    } else if (awayTeamScore! > homeTeamScore!) {
+      awayScoreColor = theme.colors.ink100;
+      awayNameColor = theme.colors.ink100;
+      awayWinner = true;
+    } else {
+      // draw
+      homeScoreColor = theme.colors.ink100;
+      awayScoreColor = theme.colors.ink100;
+      homeNameColor = theme.colors.ink300;
+      awayNameColor = theme.colors.ink300;
+    }
+  } else if (!isSched) {
+    homeNameColor = theme.colors.ink400;
+    awayNameColor = theme.colors.ink400;
+  } else {
+    homeNameColor = theme.colors.ink100;
+    awayNameColor = theme.colors.ink100;
   }
 
   const timeStr = new Date(matchDatetime).toLocaleTimeString('pt-BR', {
@@ -176,74 +221,122 @@ export default function MatchCard({ match, poolContext, showBorder = true }: Mat
   const renderChip = () => {
     if (!poolContext) return null;
     const pred = poolContext.userPrediction;
-    const predLabel = pred
-      ? `${pred.predictedHomeScore}-${pred.predictedAwayScore}`
-      : '—';
+    const predScore = pred
+      ? `${pred.predictedHomeScore}–${pred.predictedAwayScore}`
+      : undefined;
 
-    if (isSched) {
-      if (!pred) {
-        return (
-          <PredictionChip
-            label="PALPITAR"
-            bg="transparent"
-            borderColor={theme.colors.pitch}
-            textColor={theme.colors.pitch}
-            dashed
-          />
-        );
-      }
+    // No prediction yet, match not started
+    if (isSched && !pred) {
       return (
         <PredictionChip
-          label={predLabel}
-          bg="rgba(200,255,62,0.12)"
+          label="PALPITAR"
+          score="+"
+          bg="transparent"
           borderColor={theme.colors.pitch}
           textColor={theme.colors.pitch}
-          showPencil
+          dashed
         />
       );
     }
 
-    if (isLive) {
-      if (!pred) {
-        return (
-          <PredictionChip
-            label="—"
-            bg="transparent"
-            borderColor={theme.colors.ink700}
-            textColor={theme.colors.ink500}
-          />
-        );
-      }
+    // Prediction submitted, match not started
+    if (isSched && pred) {
       return (
         <PredictionChip
-          label={predLabel}
-          bg="rgba(255,176,32,0.12)"
-          borderColor="rgba(255,176,32,0.3)"
+          label="PALPITADO"
+          score={predScore}
+          bg={theme.colors.ink850}
+          borderColor={theme.colors.ink700}
+          textColor={theme.colors.ink500}
+          scoreColor={theme.colors.ink100}
+        />
+      );
+    }
+
+    // Match live, prediction exists
+    if (isLive && pred) {
+      return (
+        <PredictionChip
+          label="AO VIVO"
+          score={predScore}
+          bg="rgba(255,176,32,0.10)"
+          borderColor="rgba(255,176,32,0.30)"
           textColor={theme.colors.signalAmber}
           showDot
-          dotColor={theme.colors.signalAmber}
+          dotColor={theme.colors.signalLive}
         />
       );
     }
 
-    if (isDone) {
-      if (!pred) {
+    // Match live, no prediction
+    if (isLive && !pred) {
+      return (
+        <PredictionChip
+          label="SEM PALPITE"
+          bg="transparent"
+          borderColor={theme.colors.ink700}
+          textColor={theme.colors.ink500}
+        />
+      );
+    }
+
+    // Match finished
+    if (isDone && pred) {
+      const isExact =
+        hasScore &&
+        pred.predictedHomeScore === homeTeamScore &&
+        pred.predictedAwayScore === awayTeamScore;
+      const isWinner = !isExact && pred.pointsEarned != null && pred.pointsEarned > 0;
+      const pts = pred.pointsEarned ?? 0;
+      const ptsLabel = pts > 0 ? `+${pts} pts` : '0 pts';
+
+      if (isExact) {
         return (
           <PredictionChip
-            label="—"
-            bg="transparent"
-            borderColor={theme.colors.ink700}
-            textColor={theme.colors.ink500}
+            label="EXATO"
+            score={predScore}
+            pts={ptsLabel}
+            bg="rgba(74,222,128,0.12)"
+            borderColor={theme.colors.signalWin}
+            textColor={theme.colors.signalWin}
+            scoreColor={theme.colors.ink100}
           />
         );
       }
-      const correct = pred.pointsEarned != null && pred.pointsEarned > 0;
+      if (isWinner) {
+        return (
+          <PredictionChip
+            label="VENCEDOR"
+            score={predScore}
+            pts={ptsLabel}
+            bg="rgba(255,176,32,0.10)"
+            borderColor={theme.colors.signalAmber}
+            textColor={theme.colors.signalAmber}
+            scoreColor={theme.colors.ink100}
+          />
+        );
+      }
       return (
         <PredictionChip
-          label={correct ? `${predLabel} ✓` : predLabel}
-          bg={correct ? 'rgba(74,222,128,0.12)' : 'rgba(240,74,80,0.12)'}
-          borderColor={correct ? theme.colors.signalWin : theme.colors.signalLose}
-          textColor={correct ? theme.colors.signalWin : theme.colors.signalLose}
+          label="ERROU"
+          score={predScore}
+          pts={ptsLabel}
+          bg="rgba(240,74,80,0.10)"
+          borderColor={theme.colors.signalLose}
+          textColor={theme.colors.signalLose}
+          scoreColor={theme.colors.ink100}
+        />
+      );
+    }
+
+    // Finished, no prediction
+    if (isDone && !pred) {
+      return (
+        <PredictionChip
+          label="SEM PALPITE"
+          bg="transparent"
+          borderColor={theme.colors.ink700}
+          textColor={theme.colors.ink500}
         />
       );
     }
@@ -277,12 +370,16 @@ export default function MatchCard({ match, poolContext, showBorder = true }: Mat
           team={match.homeTeam}
           score={hasScore ? homeTeamScore : null}
           scoreColor={homeScoreColor}
+          nameColor={homeNameColor}
+          bold={homeWinner}
         />
         <View style={styles.teamGap} />
         <TeamRow
           team={match.awayTeam}
           score={hasScore ? awayTeamScore : null}
           scoreColor={awayScoreColor}
+          nameColor={awayNameColor}
+          bold={awayWinner}
         />
       </View>
 
@@ -361,17 +458,37 @@ const styles = StyleSheet.create({
     fontSize: 10,
   },
   chip: {
+    width: 76,
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 2,
+  },
+  chipLabelRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 100,
-    borderWidth: 1,
   },
-  chipText: {
+  chipDotWrap: {
+    marginRight: 1,
+  },
+  chipLabel: {
     fontFamily: TypographyFamilies.mono,
-    fontSize: 11,
+    fontSize: 8,
+    letterSpacing: 0.3,
+    includeFontPadding: false,
+  },
+  chipScore: {
+    fontFamily: TypographyFamilies.display,
+    fontSize: 16,
+    includeFontPadding: false,
+    letterSpacing: -0.5,
+  },
+  chipPts: {
+    fontFamily: TypographyFamilies.mono,
+    fontSize: 8,
     includeFontPadding: false,
   },
 });
