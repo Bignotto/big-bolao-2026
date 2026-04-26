@@ -107,6 +107,12 @@ updated: 2026-04-17
 
 ---
 
+## 🎨 Design System
+
+- [[Design/Design-System-Pitch-Night]] — Pitch Night theme: tokens, typography, color scale, layout rules, AppButton redesign
+
+---
+
 ## 📋 Decisões (ADR)
 
 - [[Decisions/ADR-001-Expo-Router]] — Escolha do Expo Router v6
