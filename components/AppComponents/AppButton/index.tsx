@@ -93,6 +93,7 @@ export default function AppButton({
   rightIcon,
   onPressIn: onPressInProp,
   onPressOut: onPressOutProp,
+  style: externalStyle,
   ...rest
 }: AppButtonProps) {
   const theme = useTheme();
@@ -121,6 +122,7 @@ export default function AppButton({
       style={[
         styles.wrapper,
         { borderRadius: radius, opacity: disabled ? 0.35 : 1, transform: [{ scale }] },
+        externalStyle,
       ]}
     >
       <Pressable

@@ -97,7 +97,7 @@ export default function LoginScreen() {
 
         <AppButton
           title="Continuar com Google"
-          color="#4285F4"
+          variant="secondary"
           isLoading={googleLoading}
           onPress={handleGoogleSignIn}
           style={{ marginBottom: 12 }}
