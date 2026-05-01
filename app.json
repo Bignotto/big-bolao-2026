@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "big-bolao-2026",
+    "name": "Big Bolão 2026",
     "slug": "big-bolao-2026",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -11,11 +11,16 @@
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#065894"
     },
     "ios": {
-      "supportsTablet": true,
-      "usesAppleSignIn": true
+      "bundleIdentifier": "com.bignotto.bigbolao2026",
+      "buildNumber": "1",
+      "supportsTablet": false,
+      "usesAppleSignIn": true,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -24,7 +29,8 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.bignotto.bigbolao2026"
+      "package": "com.bignotto.bigbolao2026",
+      "versionCode": 1
     },
     "web": {
       "bundler": "metro",
