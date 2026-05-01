@@ -16,6 +16,16 @@
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios": {
+        "appleId": "bignotto@gmail.com",
+        "ascAppId": "FILL_IN_FROM_APP_STORE_CONNECT",
+        "appleTeamId": "FILL_IN_YOUR_TEAM_ID"
+      },
+      "android": {
+        "serviceAccountKeyPath": "./google-play-service-account.json",
+        "track": "internal"
+      }
+    }
   }
 }
