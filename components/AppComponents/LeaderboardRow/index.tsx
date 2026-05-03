@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
   FadeIn,
@@ -8,6 +7,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useTheme } from 'styled-components/native';
 import { TypographyFamilies } from '@/constants/tokens';
+import AppAvatar from '@/components/AppComponents/AppAvatar';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -34,47 +34,6 @@ export interface LeaderboardRowProps {
   showBorder?: boolean;
 }
 
-// ─── Avatar helpers ───────────────────────────────────────────────────────────
-
-const AVATAR_PALETTE = ['#D8A040', '#4D7D5B', '#B5643A', '#5D4DA0', '#2E7C8C', '#B8414A'];
-
-function hashId(id: string): number {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) {
-    h = Math.imul(31, h) + id.charCodeAt(i);
-    h |= 0;
-  }
-  return Math.abs(h) % AVATAR_PALETTE.length;
-}
-
-function Avatar({ user }: { user: LeaderboardEntry['user'] }) {
-  const [imgFailed, setImgFailed] = useState(false);
-  const showImage = !!user.profileImageUrl && !imgFailed;
-  const color = AVATAR_PALETTE[hashId(user.id)];
-  const initial = user.name.charAt(0).toUpperCase();
-
-  return (
-    // overflow:hidden on its own (no backgroundColor here) avoids the Android
-    // bug where borderRadius + overflow:hidden + backgroundColor = blank circle.
-    // Background color lives on an absoluteFill child instead.
-    <View style={styles.avatarClip}>
-      {showImage ? (
-        <Image
-          source={{ uri: user.profileImageUrl! }}
-          style={StyleSheet.absoluteFill}
-          resizeMode="cover"
-          onError={() => setImgFailed(true)}
-        />
-      ) : (
-        <>
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: color }]} />
-          <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.25)' }]} />
-          <Text style={styles.avatarInitial}>{initial}</Text>
-        </>
-      )}
-    </View>
-  );
-}
 
 // ─── Row ──────────────────────────────────────────────────────────────────────
 
@@ -116,7 +75,11 @@ export default function LeaderboardRow({
       </Text>
 
       {/* 2 · Avatar */}
-      <Avatar user={entry.user} />
+      <AppAvatar
+        imagePath={entry.user.profileImageUrl ?? undefined}
+        name={entry.user.name}
+        size={32}
+      />
 
       {/* 3 · Name + delta */}
       <View style={styles.nameCol}>
@@ -193,22 +156,6 @@ const styles = StyleSheet.create({
     fontFamily: TypographyFamilies.mono,
     fontSize: 13,
     textAlign: 'right',
-    includeFontPadding: false,
-  },
-  avatarClip: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
-  },
-  avatarInitial: {
-    fontFamily: TypographyFamilies.display,
-    fontSize: 13,
-    color: '#fff',
     includeFontPadding: false,
   },
   nameCol: {

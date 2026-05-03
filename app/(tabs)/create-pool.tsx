@@ -184,6 +184,17 @@ export default function CreatePoolScreen() {
             </Field>
           </View>
 
+          <View style={s.gap20} />
+
+          {/* ── Scoring rules hint ── */}
+          <View style={[s.infoBox, { backgroundColor: c.ink850, borderColor: c.ink700 }]}>
+            <Ionicons name="trophy-outline" size={16} color={c.ink400} style={{ marginTop: 1 }} />
+            <Text style={[s.infoText, { color: c.ink400 }]}>
+              As regras de pontuação podem ser ajustadas depois em{' '}
+              <Text style={{ color: c.ink300 }}>Configurações do grupo</Text>.
+            </Text>
+          </View>
+
           {/* ── API error ── */}
           {!!error && (
             <>
@@ -285,6 +296,22 @@ const s = StyleSheet.create({
   },
   toggleInfo: { flex: 1, marginRight: 12 },
   toggleHint: { fontFamily: TypographyFamilies.sans, fontSize: 12, marginTop: 2 },
+
+  // Info box
+  infoBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 12,
+    gap: 10,
+  },
+  infoText: {
+    flex: 1,
+    fontFamily: TypographyFamilies.sans,
+    fontSize: 13,
+    lineHeight: 18,
+  },
 
   // Error box
   errorBox: {
