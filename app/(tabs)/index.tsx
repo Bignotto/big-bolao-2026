@@ -1,8 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import {
   Animated,
   FlatList,
-  Image,
   Pressable,
   StyleSheet,
   Text,
@@ -17,6 +16,7 @@ import { useSession } from '@/context/SessionContext';
 import { usePools, type Pool } from '@/hooks/usePools';
 import { useLiveMatches, type LiveMatchEntry } from '@/hooks/useLiveMatches';
 import LiveMatchCard from '@/components/LiveMatchCard';
+import AppAvatar from '@/components/AppComponents/AppAvatar';
 import { TypographyFamilies } from '@/constants/tokens';
 import {
   TOURNAMENT_START_DATE,
@@ -26,54 +26,9 @@ import {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const AVATAR_PALETTE = ['#D8A040', '#4D7D5B', '#B5643A', '#5D4DA0', '#2E7C8C', '#B8414A'];
-
-function hashId(id: string): number {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) {
-    h = Math.imul(31, h) + id.charCodeAt(i);
-    h |= 0;
-  }
-  return Math.abs(h) % AVATAR_PALETTE.length;
-}
-
 function daysUntil(date: Date): number {
   const diff = date.getTime() - Date.now();
   return Math.max(0, Math.floor(diff / 86_400_000));
-}
-
-// ─── Header avatar ────────────────────────────────────────────────────────────
-
-function HeaderAvatar({
-  userId,
-  imageUrl,
-  initial,
-}: {
-  userId: string;
-  imageUrl: string | null;
-  initial: string;
-}) {
-  const [failed, setFailed] = useState(false);
-  const color = AVATAR_PALETTE[hashId(userId)];
-
-  if (imageUrl && !failed) {
-    return (
-      <Image
-        source={{ uri: imageUrl }}
-        style={s.avatarImg}
-        resizeMode="cover"
-        onError={() => setFailed(true)}
-      />
-    );
-  }
-
-  return (
-    <View style={s.avatarClip}>
-      <View style={[StyleSheet.absoluteFill, { backgroundColor: color }]} />
-      <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.2)' }]} />
-      <Text style={s.avatarInitial}>{initial}</Text>
-    </View>
-  );
 }
 
 // ─── Skeleton ─────────────────────────────────────────────────────────────────
@@ -281,7 +236,6 @@ export default function DashboardScreen() {
   }
 
   const firstName = (apiUser?.fullName ?? '').split(' ')[0] || 'Você';
-  const initial = firstName.charAt(0).toUpperCase();
   const totalPending = pools.reduce((n, p) => n + (p.pendingPredictionsCount ?? 0), 0);
 
   function handleJoin() {
@@ -306,11 +260,13 @@ export default function DashboardScreen() {
               : ''}
           </Text>
         </View>
-        <HeaderAvatar
-          userId={apiUser?.id ?? 'anon'}
-          imageUrl={apiUser?.profileImageUrl ?? null}
-          initial={initial}
-        />
+        <View style={{ marginLeft: 16 }}>
+          <AppAvatar
+            imagePath={apiUser?.profileImageUrl ?? undefined}
+            name={firstName}
+            size={36}
+          />
+        </View>
       </View>
 
       {/* Live match cards — shown above countdown when a predicted match is active */}
@@ -318,7 +274,7 @@ export default function DashboardScreen() {
         <View style={{ gap: 10, marginBottom: 12 }}>
           {liveMatchesWithMyPredictions.map((entry) => (
             <LiveMatchCard
-              key={entry.match.matchId}
+              key={entry.match.id}
               entry={entry}
               onPress={handleLiveCardPress}
             />
@@ -382,8 +338,8 @@ const s = StyleSheet.create({
   // ── Header ──
   header: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    paddingTop: 60,
+    alignItems: 'center',
+    paddingTop: 0,
     paddingBottom: 24,
   },
   headerLeft: { flex: 1 },
@@ -405,31 +361,6 @@ const s = StyleSheet.create({
     fontFamily: TypographyFamilies.sans,
     fontSize: 14,
     marginTop: 4,
-    includeFontPadding: false,
-  },
-
-  // ── Avatar ──
-  avatarImg: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    marginLeft: 16,
-    marginTop: 58,
-  },
-  avatarClip: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    overflow: 'hidden',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginLeft: 16,
-    marginTop: 58,
-  },
-  avatarInitial: {
-    fontFamily: TypographyFamilies.display,
-    fontSize: 16,
-    color: '#fff',
     includeFontPadding: false,
   },
 

@@ -879,7 +879,7 @@ const s = StyleSheet.create({
 
   // Hero
   hero: {
-    paddingTop: 60,
+    paddingTop: 0,
     paddingHorizontal: 20,
     paddingBottom: 20,
     overflow: 'hidden',

@@ -15,7 +15,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from 'styled-components/native';
 
 import { useMatchPoolPredictions, type PoolPredictionItem } from '@/hooks/useMatchPoolPredictions';
-import { isMatchLocked } from '@/domain/entities/Match';
 import { TypographyFamilies } from '@/constants/tokens';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -35,7 +34,7 @@ function formatEyebrow(m: MatchLike): string {
   const day = DAYS[dt.getDay()];
   const date = `${String(dt.getDate()).padStart(2, '0')} ${MONTHS[dt.getMonth()]}`;
   const stagePart = m.group ? `GRUPO ${m.group}` : m.stage.replace(/_/g, ' ');
-  if (m.matchStatus === 'LIVE') return `${stagePart}  ·  AO VIVO`;
+  if (m.matchStatus === 'IN_PROGRESS') return `${stagePart}  ·  AO VIVO`;
   if (m.matchStatus === 'COMPLETED') return `${stagePart}  ·  ${day} ${date}`;
   return `${stagePart}  ·  ${day} ${date}`;
 }
@@ -72,10 +71,11 @@ type PoolCardProps = {
   item: PoolPredictionItem;
   matchLocked: boolean;
   matchCompleted: boolean;
+  matchIsLive: boolean;
   onPress: (item: PoolPredictionItem) => void;
 };
 
-function PoolCard({ item, matchLocked, matchCompleted, onPress }: PoolCardProps) {
+function PoolCard({ item, matchLocked, matchCompleted, matchIsLive, onPress }: PoolCardProps) {
   const theme = useTheme();
   const hasPred = item.prediction !== null;
 
@@ -111,17 +111,23 @@ function PoolCard({ item, matchLocked, matchCompleted, onPress }: PoolCardProps)
             <Text style={[s.predScore, { color: theme.colors.pitch }]}>
               {item.prediction!.predictedHomeScore}–{item.prediction!.predictedAwayScore}
             </Text>
-            {matchCompleted && item.prediction!.pointsEarned != null && (
-              <Text style={[s.predPoints, { color: theme.colors.pitch }]}>
-                +{item.prediction!.pointsEarned} pts
-              </Text>
-            )}
           </View>
-          <Ionicons
-            name="lock-closed-outline"
-            size={16}
-            color={matchLocked ? theme.colors.ink600 : theme.colors.pitch}
-          />
+          {matchCompleted || matchIsLive ? (
+            <View style={s.resultBlock}>
+              <Text style={[s.resultLabel, { color: matchIsLive ? theme.colors.signalLive : theme.colors.ink500 }]}>
+                {matchIsLive ? 'PARCIAL' : 'PONTOS'}
+              </Text>
+              <Text style={[s.resultScore, { color: theme.colors.pitch }]}>
+                +{item.prediction!.pointsEarned ?? 0}
+              </Text>
+            </View>
+          ) : (
+            <Ionicons
+              name="lock-closed-outline"
+              size={16}
+              color={matchLocked ? theme.colors.ink600 : theme.colors.pitch}
+            />
+          )}
         </View>
       ) : matchLocked ? (
         // State D — no prediction, locked
@@ -151,9 +157,9 @@ export default function MatchHubScreen() {
 
   const { match, poolPredictions, isLoading } = useMatchPoolPredictions(matchId);
 
-  const locked = match ? isMatchLocked(match) : false;
+  const locked = match ? match.matchStatus !== 'SCHEDULED' : true;
   const completed = match?.matchStatus === 'COMPLETED';
-  const isLive = match?.matchStatus === 'LIVE';
+  const isLive = match?.matchStatus === 'IN_PROGRESS';
 
   function handleShare() {
     if (!match) return;
@@ -287,6 +293,7 @@ export default function MatchHubScreen() {
               item={item}
               matchLocked={locked}
               matchCompleted={completed}
+              matchIsLive={isLive}
               onPress={handlePoolPress}
             />
           ))
@@ -448,6 +455,26 @@ const s = StyleSheet.create({
     fontSize: 11,
     includeFontPadding: false,
     marginTop: 4,
+  },
+
+  // Result block (completed)
+  resultBlock: {
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    paddingLeft: 12,
+  },
+  resultLabel: {
+    fontFamily: TypographyFamilies.mono,
+    fontSize: 9,
+    letterSpacing: 0.5,
+    includeFontPadding: false,
+    marginBottom: 2,
+  },
+  resultScore: {
+    fontFamily: TypographyFamilies.display,
+    fontSize: 28,
+    includeFontPadding: false,
+    letterSpacing: -0.8,
   },
 
   // State D — locked, no prediction

@@ -408,8 +408,8 @@ const s = StyleSheet.create({
   flex: { flex: 1 },
 
   header: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 4 },
-  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  heroTitle: { fontFamily: TypographyFamilies.display, fontSize: 38, lineHeight: 42 },
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  heroTitle: { flex: 1, fontFamily: TypographyFamilies.display, fontSize: 38, lineHeight: 42 },
   subtitle: { fontFamily: TypographyFamilies.sans, fontSize: 13, marginTop: 4 },
   createBtn: {
     flexDirection: 'row',
