@@ -1,5 +1,6 @@
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { makeRedirectUri } from 'expo-auth-session';
+import * as Crypto from 'expo-crypto';
 import * as WebBrowser from 'expo-web-browser';
 import { useState } from 'react';
 import { Alert, Platform } from 'react-native';
@@ -13,9 +14,18 @@ WebBrowser.maybeCompleteAuthSession();
 
 const redirectTo = makeRedirectUri({ scheme: 'bigbolao2026', path: 'auth/callback' });
 
+async function createNonce(): Promise<{ raw: string; hashed: string }> {
+  const raw = Array.from(Crypto.getRandomBytes(16))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+  const hashed = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, raw);
+  return { raw, hashed };
+}
+
 export default function LoginScreen() {
   const theme = useTheme();
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [appleLoading, setAppleLoading] = useState(false);
 
   async function handleGoogleSignIn() {
     setGoogleLoading(true);
@@ -55,24 +65,40 @@ export default function LoginScreen() {
   }
 
   async function handleAppleSignIn() {
+    setAppleLoading(true);
     try {
+      const nonce = await createNonce();
+
       const credential = await AppleAuthentication.signInAsync({
         requestedScopes: [
           AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
           AppleAuthentication.AppleAuthenticationScope.EMAIL,
         ],
+        nonce: nonce.hashed,
       });
+
       if (!credential.identityToken) throw new Error('No identity token from Apple');
 
       const { error } = await supabase.auth.signInWithIdToken({
         provider: 'apple',
         token: credential.identityToken,
+        nonce: nonce.raw,
       });
       if (error) throw error;
+
+      // Apple only provides full name on the very first sign-in — capture it immediately
+      const fullName = [credential.fullName?.givenName, credential.fullName?.familyName]
+        .filter(Boolean)
+        .join(' ');
+      if (fullName) {
+        await supabase.auth.updateUser({ data: { full_name: fullName } });
+      }
     } catch (e: any) {
       if (e.code !== 'ERR_REQUEST_CANCELED') {
         Alert.alert('Apple Sign In failed', e.message);
       }
+    } finally {
+      setAppleLoading(false);
     }
   }
 
@@ -103,15 +129,24 @@ export default function LoginScreen() {
           style={{ marginBottom: 12 }}
         />
 
-        {Platform.OS === 'ios' && (
-          <AppleAuthentication.AppleAuthenticationButton
-            buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-            buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-            cornerRadius={8}
-            style={{ width: '100%', height: 48 }}
-            onPress={handleAppleSignIn}
-          />
-        )}
+        {Platform.OS === 'ios' &&
+          (appleLoading ? (
+            <AppButton
+              title="Continuar com Apple"
+              variant="secondary"
+              isLoading
+              onPress={() => {}}
+              style={{ width: '100%', height: 48 }}
+            />
+          ) : (
+            <AppleAuthentication.AppleAuthenticationButton
+              buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+              buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+              cornerRadius={8}
+              style={{ width: '100%', height: 48 }}
+              onPress={handleAppleSignIn}
+            />
+          ))}
       </Card>
     </Screen>
   );
