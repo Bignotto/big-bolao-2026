@@ -3,12 +3,13 @@ import { makeRedirectUri } from 'expo-auth-session';
 import * as Crypto from 'expo-crypto';
 import * as WebBrowser from 'expo-web-browser';
 import { useState } from 'react';
-import { Alert, Platform } from 'react-native';
-import styled, { useTheme, type DefaultTheme } from 'styled-components/native';
+import { Alert, Platform, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useTheme } from 'styled-components/native';
 
 import AppButton from '@/components/AppComponents/AppButton';
-import AppText from '@/components/AppComponents/AppText';
 import { supabase } from '@/lib/supabase';
+import { TypographyFamilies } from '@/constants/tokens';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -24,6 +25,7 @@ async function createNonce(): Promise<{ raw: string; hashed: string }> {
 
 export default function LoginScreen() {
   const theme = useTheme();
+  const c = theme.colors;
   const [googleLoading, setGoogleLoading] = useState(false);
   const [appleLoading, setAppleLoading] = useState(false);
 
@@ -32,7 +34,11 @@ export default function LoginScreen() {
     try {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo, skipBrowserRedirect: true },
+        options: {
+          redirectTo,
+          skipBrowserRedirect: true,
+          queryParams: { prompt: 'select_account' },
+        },
       });
       if (error) throw error;
       if (!data.url) throw new Error('No OAuth URL returned');
@@ -44,11 +50,9 @@ export default function LoginScreen() {
         const code = url.searchParams.get('code');
 
         if (code) {
-          // PKCE flow: exchange the code for a session
           const { error: sessionError } = await supabase.auth.exchangeCodeForSession(result.url);
           if (sessionError) throw sessionError;
         } else {
-          // Implicit flow: tokens are in the hash fragment
           const hashParams = new URLSearchParams(url.hash.replace('#', ''));
           const accessToken = hashParams.get('access_token');
           const refreshToken = hashParams.get('refresh_token') ?? '';
@@ -86,7 +90,7 @@ export default function LoginScreen() {
       });
       if (error) throw error;
 
-      // Apple only provides full name on the very first sign-in — capture it immediately
+      // Apple only provides full name on first sign-in — capture immediately
       const fullName = [credential.fullName?.givenName, credential.fullName?.familyName]
         .filter(Boolean)
         .join(' ');
@@ -103,70 +107,155 @@ export default function LoginScreen() {
   }
 
   return (
-    <Screen>
-      <Hero>
-        <AppText size="xlg" bold color={theme.colors.white} align="center">
-          Big Bolão
-        </AppText>
-        <AppText size="md" color="rgba(255,255,255,0.75)" align="center">
-          Copa do Mundo 2026
-        </AppText>
-      </Hero>
+    <SafeAreaView style={[s.root, { backgroundColor: c.ink950 }]} edges={['top']}>
 
-      <Card>
-        <AppText size="lg" bold align="center">
-          Entrar
-        </AppText>
-        <AppText size="sm" color={theme.colors.text_gray} align="center" style={{ marginTop: 4, marginBottom: 32 }}>
-          Escolha como quer acessar o bolão
-        </AppText>
+      {/* ── Hero ── */}
+      <View style={s.hero}>
+
+        {/* Tournament badge */}
+        <View style={[s.badge, { borderColor: 'rgba(200,255,62,0.22)', backgroundColor: 'rgba(200,255,62,0.06)' }]}>
+          <Text style={s.badgeEmoji}>⚽</Text>
+          <Text style={[s.badgeTxt, { color: c.pitch }]}>MUNDIAL 2026</Text>
+        </View>
+
+        {/* App name */}
+        <Text style={[s.appName, { color: c.ink100 }]}>
+          Big{'\n'}Bolão<Text style={{ color: c.pitch }}>.</Text>
+        </Text>
+
+        {/* Tagline */}
+        <Text style={[s.tagline, { color: c.ink400 }]}>
+          Palpites, amigos{'\n'}e muito futebol.
+        </Text>
+
+        {/* Decorative bottom rule */}
+        <View style={[s.rule, { backgroundColor: c.ink800 }]} />
+      </View>
+
+      {/* ── Auth card ── */}
+      <View style={[s.card, { backgroundColor: c.ink900, borderTopColor: c.ink800 }]}>
+
+        <Text style={[s.cardLabel, { color: c.ink500 }]}>ACESSE SUA CONTA</Text>
+
+        <View style={s.gap16} />
 
         <AppButton
           title="Continuar com Google"
           variant="secondary"
           isLoading={googleLoading}
           onPress={handleGoogleSignIn}
-          style={{ marginBottom: 12 }}
         />
 
-        {Platform.OS === 'ios' &&
-          (appleLoading ? (
-            <AppButton
-              title="Continuar com Apple"
-              variant="secondary"
-              isLoading
-              onPress={() => {}}
-              style={{ width: '100%', height: 48 }}
-            />
-          ) : (
-            <AppleAuthentication.AppleAuthenticationButton
-              buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-              buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-              cornerRadius={8}
-              style={{ width: '100%', height: 48 }}
-              onPress={handleAppleSignIn}
-            />
-          ))}
-      </Card>
-    </Screen>
+        {Platform.OS === 'ios' && (
+          <View style={s.gap12}>
+            {appleLoading ? (
+              <AppButton
+                title="Continuar com Apple"
+                variant="secondary"
+                isLoading
+                onPress={() => {}}
+                style={{ width: '100%', height: 48 }}
+              />
+            ) : (
+              <AppleAuthentication.AppleAuthenticationButton
+                buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+                buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                cornerRadius={10}
+                style={{ width: '100%', height: 48 }}
+                onPress={handleAppleSignIn}
+              />
+            )}
+          </View>
+        )}
+
+        <Text style={[s.legal, { color: c.ink600 }]}>
+          Ao entrar você concorda com os Termos de Uso e Política de Privacidade.
+        </Text>
+      </View>
+
+    </SafeAreaView>
   );
 }
 
-const Screen = styled.View`
-  flex: 1;
-  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.primary_dark};
-`;
+// ─── Styles ───────────────────────────────────────────────────────────────────
 
-const Hero = styled.View`
-  flex: 1;
-  justify-content: center;
-  align-items: center;
-  gap: 8px;
-`;
+const s = StyleSheet.create({
+  root: { flex: 1 },
 
-const Card = styled.View`
-  background-color: ${({ theme }: { theme: DefaultTheme }) => theme.colors.background};
-  border-top-left-radius: 24px;
-  border-top-right-radius: 24px;
-  padding: 32px 24px 48px;
-`;
+  // ── Hero ──
+  hero: {
+    flex: 1,
+    paddingHorizontal: 28,
+    justifyContent: 'center',
+    gap: 0,
+  },
+  badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 6,
+    borderWidth: 1,
+    borderRadius: 100,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginBottom: 28,
+  },
+  badgeEmoji: { fontSize: 13 },
+  badgeTxt: {
+    fontFamily: TypographyFamilies.mono,
+    fontSize: 11,
+    letterSpacing: 1.2,
+    includeFontPadding: false,
+  },
+  appName: {
+    fontFamily: TypographyFamilies.display,
+    fontSize: 72,
+    lineHeight: 70,
+    letterSpacing: -3,
+    includeFontPadding: false,
+    marginBottom: 20,
+  },
+  tagline: {
+    fontFamily: TypographyFamilies.sans,
+    fontSize: 18,
+    lineHeight: 26,
+    includeFontPadding: false,
+    marginBottom: 40,
+  },
+  rule: {
+    height: StyleSheet.hairlineWidth,
+    position: 'absolute',
+    bottom: 0,
+    left: 28,
+    right: 28,
+  },
+
+  // ── Auth card ──
+  card: {
+    paddingHorizontal: 24,
+    paddingTop: 28,
+    paddingBottom: 40,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  cardLabel: {
+    fontFamily: TypographyFamilies.mono,
+    fontSize: 10,
+    letterSpacing: 1.4,
+    includeFontPadding: false,
+    marginBottom: 4,
+  },
+  legal: {
+    fontFamily: TypographyFamilies.sans,
+    fontSize: 11,
+    lineHeight: 16,
+    textAlign: 'center',
+    marginTop: 20,
+    includeFontPadding: false,
+  },
+
+  // Spacing
+  gap12: { marginTop: 12 },
+  gap16: { height: 16 },
+});

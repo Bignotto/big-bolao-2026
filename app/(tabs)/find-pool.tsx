@@ -185,7 +185,7 @@ export default function FindPoolScreen() {
               <Text style={[s.createBtnText, { color: c.pitch }]}>Criar grupo</Text>
             </Pressable>
           </View>
-          <Text style={[s.subtitle, { color: c.ink400 }]}>Copa do Mundo 2026</Text>
+          <Text style={[s.subtitle, { color: c.ink400 }]}>Mundial 2026</Text>
         </View>
 
         {/* Segmented control */}

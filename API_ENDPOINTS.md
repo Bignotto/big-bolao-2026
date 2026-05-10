@@ -7,7 +7,7 @@ All endpoints (except GET /health) require Authorization: Bearer <supabase_token
 - POST /users → create account (no auth required)
 - GET /users/me
 - GET /users/:userId
-- PUT /users/:userId
+- PUT /users/:userId → update profile (body fields all optional: fullName, email, profileImageUrl)
 - GET /users/:userId/pools
 - GET /users/me/pools/standings
 - GET /users/me/predictions (?poolId=) → user's predictions; use for pool detail to avoid per-match N+1

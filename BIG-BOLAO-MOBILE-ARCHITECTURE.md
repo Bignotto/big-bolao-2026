@@ -7,7 +7,7 @@ Este documento descreve a arquitetura atual do app mobile **Big Bolão 2026** e 
 O app permite que usuários:
 
 - Criem ou entrem em bolões
-- Vejam a agenda da Copa do Mundo 2026
+- Vejam a agenda do Mundial 2026
 - Façam palpites por partida e por bolão
 - Acompanhem pontuação e ranking
 - Editem regras de pontuação quando são donos do bolão
@@ -201,7 +201,7 @@ Regra crítica: nunca adicionar chamadas de prediction nesta tela.
 
 ### Criar e Encontrar Bolão
 
-- `app/(tabs)/create-pool.tsx`: cria bolão para o torneio fixo da Copa 2026
+- `app/(tabs)/create-pool.tsx`: cria bolão para o torneio fixo do Mundial 2026
 - `app/(tabs)/find-pool.tsx`: busca por nome ou por invite code
 - Fluxo de convite: `GET /pool-invites/:code` para preview, depois `POST /pool-invites/:code` para entrar
 

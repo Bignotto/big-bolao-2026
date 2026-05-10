@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -51,6 +51,8 @@ import MatchFilterControls, {
   type MatchFilterMode,
 } from '@/components/matches/MatchFilterControls';
 import { TypographyFamilies } from '@/constants/tokens';
+import RankingShareCard from '@/components/AppComponents/RankingShareCard';
+import { useShareRanking } from '@/hooks/useShareRanking';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -264,6 +266,7 @@ function PredictionMatchPanel({
       />
       {mode === 'group-stage' ? (
         <SectionList
+          style={{ flex: 1, backgroundColor: theme.colors.background }}
           sections={sections}
           keyExtractor={(item) => String(item.id)}
           contentContainerStyle={s.listContent}
@@ -288,6 +291,7 @@ function PredictionMatchPanel({
         />
       ) : (
         <FlatList<Match>
+          style={{ flex: 1, backgroundColor: theme.colors.background }}
           data={dateMatches}
           keyExtractor={(item) => String(item.id)}
           contentContainerStyle={s.listContent}
@@ -344,6 +348,7 @@ function GroupInfoTab({
 
   return (
     <ScrollView
+      style={{ flex: 1, backgroundColor: c.background }}
       contentContainerStyle={sg.scroll}
       showsVerticalScrollIndicator={false}
       refreshControl={
@@ -512,6 +517,10 @@ export default function PoolDetailsScreen() {
   const [predFilterMode, setPredFilterMode] = useState<MatchFilterMode>('group-stage');
   const [predChip, setPredChip] = useState<MatchFilterChipValue>('A');
   const [predDate, setPredDate] = useState<string | null>(null);
+
+  const cardRef = useRef<View>(null);
+  const shareDate = new Date().toLocaleDateString('pt-BR');
+  const { shareRanking, sharing } = useShareRanking(cardRef);
 
   // ── Data ────────────────────────────────────────────────────────────────────
 
@@ -703,8 +712,6 @@ export default function PoolDetailsScreen() {
     <SafeAreaView style={[s.root, { backgroundColor: theme.colors.background }]}>
       {/* Hero header */}
       <View style={s.hero}>
-        {/* Subtle top accent */}
-        <View style={s.heroAccent} />
 
         {/* Nav row */}
         <View style={s.navRow}>
@@ -778,6 +785,7 @@ export default function PoolDetailsScreen() {
       {/* ── Standings ── */}
       {activeTab === 'standings' && (
         <FlatList<LeaderboardEntry>
+          style={{ flex: 1, backgroundColor: theme.colors.background }}
           data={rankingEntries}
           keyExtractor={(item) => item.userId}
           refreshControl={
@@ -816,6 +824,16 @@ export default function PoolDetailsScreen() {
                 variant="secondary"
                 onPress={() => setActiveTab('predictions')}
               />
+              {leaderboardEntries.length > 0 && (
+                <View style={{ marginTop: 10 }}>
+                  <AppButton
+                    title="Compartilhar ranking"
+                    variant="primary"
+                    isLoading={sharing}
+                    onPress={shareRanking}
+                  />
+                </View>
+              )}
             </View>
           }
           contentContainerStyle={{ flexGrow: 1 }}
@@ -861,6 +879,15 @@ export default function PoolDetailsScreen() {
           onLeave={handleLeave}
         />
       )}
+      {/* Off-screen share card — mounted for capture, not visible */}
+      <View style={s.offscreen} pointerEvents="none">
+        <RankingShareCard
+          ref={cardRef}
+          poolName={pool.name}
+          entries={leaderboardEntries}
+          date={shareDate}
+        />
+      </View>
     </SafeAreaView>
   );
 }
@@ -879,16 +906,8 @@ const s = StyleSheet.create({
 
   // Hero
   hero: {
-    paddingTop: 0,
     paddingHorizontal: 20,
     paddingBottom: 20,
-    overflow: 'hidden',
-  },
-  heroAccent: {
-    position: 'absolute',
-    top: 0, left: 0, right: 0,
-    height: 120,
-    backgroundColor: 'rgba(200,255,62,0.04)',
   },
   navRow: {
     flexDirection: 'row',
@@ -1009,6 +1028,7 @@ const s = StyleSheet.create({
     includeFontPadding: false,
   },
   standingsFooter: { padding: 20 },
+  offscreen: { position: 'absolute', top: 0, left: 0, opacity: 0 },
   updatedTxt: {
     fontFamily: TypographyFamilies.mono,
     fontSize: 10,

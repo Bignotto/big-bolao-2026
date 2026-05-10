@@ -7,11 +7,11 @@ updated: 2026-04-17
 # Big Bolão 2026 — Visão Geral
 
 > [!note] Resumo
-> Aplicativo mobile de bolões para a Copa do Mundo FIFA 2026. Usuários criam ou entram em bolões, fazem palpites de placar e competem no ranking.
+> Aplicativo mobile de bolões para a Mundial 2026. Usuários criam ou entram em bolões, fazem palpites de placar e competem no ranking.
 
 ## Propósito
 
-- Criar e gerenciar **bolões** (grupos de apostas) temáticos da Copa 2026
+- Criar e gerenciar **bolões** (grupos de apostas) temáticos do Mundial 2026
 - Fazer **palpites de placar** em partidas do torneio
 - Acompanhar o **ranking** (leaderboard) do bolão em tempo real
 - Suporte a **convite por código** para bolões privados

@@ -14,7 +14,9 @@ type User = {
 };
 
 type UpdateProfilePayload = {
-  fullName: string;
+  fullName?: string;
+  email?: string;
+  profileImageUrl?: string;
 };
 
 export function useUpdateProfile(userId: string) {
