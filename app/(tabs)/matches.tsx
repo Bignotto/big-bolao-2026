@@ -300,7 +300,7 @@ export default function MatchesScreen() {
         {/* Eyebrow + title */}
         <View style={sf.titleArea}>
           <Text style={[sf.eyebrow, { color: theme.colors.ink500 }]}>
-            COPA DO MUNDO · 2026
+            MUNDIAL · 2026
           </Text>
           <Text style={[sf.title, { color: theme.colors.ink100 }]}>Partidas</Text>
         </View>

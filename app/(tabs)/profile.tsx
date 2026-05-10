@@ -15,6 +15,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from 'styled-components/native';
 import { Ionicons } from '@expo/vector-icons';
 
+import { useRouter } from 'expo-router';
+
 import { useMe } from '@/hooks/useMe';
 import { useUpdateProfile, useLogout } from '@/hooks/useUpdateProfile';
 import { useSession } from '@/context/SessionContext';
@@ -46,7 +48,7 @@ const ACHIEVEMENTS = [
   { id: '3', icon: '🔥', label: 'Sequência 5', unlocked: false },
 ];
 
-const APP_VERSION = '2.4.0';
+const APP_VERSION = '1.0.0';
 const MAX_NAME = 40;
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
@@ -57,6 +59,7 @@ export default function ProfileScreen() {
   const c = theme.colors;
 
   const { data: user, isLoading } = useMe();
+  const router = useRouter();
   const mutation = useUpdateProfile(apiUser?.id ?? '');
   const logout = useLogout();
 
@@ -136,16 +139,11 @@ export default function ProfileScreen() {
         {/* ── Identity card ── */}
         <View style={[s.card, { backgroundColor: c.ink850 }]}>
           <View style={s.identityRow}>
-            <View>
-              <AppAvatar
-                imagePath={user.profileImageUrl ?? undefined}
-                name={user.fullName}
-                size={56}
-              />
-              <View style={[s.editBadge, { backgroundColor: c.ink700 }]}>
-                <Ionicons name="pencil" size={10} color={c.ink300} />
-              </View>
-            </View>
+            <AppAvatar
+              imagePath={user.profileImageUrl ?? undefined}
+              name={user.fullName}
+              size={56}
+            />
             <View style={s.identityInfo}>
               <Text style={[s.identityName, { color: c.ink100 }]} numberOfLines={1}>
                 {user.fullName}
@@ -193,7 +191,7 @@ export default function ProfileScreen() {
         <View style={[s.card, { backgroundColor: c.ink850 }]}>
           <View style={s.rowBetween}>
             <Text style={[s.sectionLabel, { color: c.ink400 }]}>CONQUISTAS</Text>
-            <Text style={[s.sectionCount, { color: c.ink500 }]}>0 / 8</Text>
+            <Text style={[s.sectionCount, { color: c.ink500 }]}>0 / {ACHIEVEMENTS.length}</Text>
           </View>
           <View style={s.gap12} />
           <ScrollView
@@ -273,6 +271,18 @@ export default function ProfileScreen() {
 
         <View style={s.gap28} />
 
+        {/* ── Ajuda ── */}
+        <Text style={[s.sectionLabel, { color: c.ink400 }]}>APLICATIVO</Text>
+        <View style={s.gap12} />
+        <AppButton
+          title="Como usar · Sobre"
+          variant="secondary"
+          icon={<Ionicons name="help-circle-outline" size={18} color={c.ink100} />}
+          onPress={() => router.push('/help')}
+        />
+
+        <View style={s.gap20} />
+
         {/* ── Conta ── */}
         <Text style={[s.sectionLabel, { color: c.ink400 }]}>CONTA</Text>
         <View style={s.gap12} />
@@ -286,7 +296,7 @@ export default function ProfileScreen() {
         {/* ── Footer ── */}
         <View style={s.gap28} />
         <Text style={[s.footer, { color: c.ink500 }]}>
-          BIG BOLÃO · V{APP_VERSION}{'   '}COPA 2026
+          BIG BOLÃO · V{APP_VERSION}{'   '}MUNDIAL 2026
         </Text>
         <View style={s.gap20} />
       </ScrollView>
@@ -323,16 +333,6 @@ const s = StyleSheet.create({
 
   // Identity
   identityRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  editBadge: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   identityInfo: { flex: 1, gap: 3 },
   identityName: { fontFamily: TypographyFamilies.sansSemi, fontSize: 16 },
   identityEmail: { fontFamily: TypographyFamilies.sans, fontSize: 13 },

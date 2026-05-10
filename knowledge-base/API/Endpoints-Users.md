@@ -1,7 +1,7 @@
 ---
 title: Endpoints — Users
 tags: [api, users, endpoints]
-updated: 2026-04-17
+updated: 2026-05-09
 ---
 
 # API — Users
@@ -10,7 +10,7 @@ updated: 2026-04-17
 |--------|------|------|-----------|
 | `GET` | `/users/me` | Sim | Retorna dados do usuário autenticado |
 | `POST` | `/users` | Sim | Cria novo usuário (chamado automaticamente no primeiro login) |
-| `PUT` | `/users/me` | Sim | Atualiza perfil (nome, foto) |
+| `PUT` | `/users/:userId` | Sim | Atualiza perfil (nome, foto, email) |
 
 ## GET /users/me
 
@@ -46,14 +46,27 @@ Chamado automaticamente quando `/users/me` retorna 404 (primeiro acesso).
 
 Provedores de conta: `EMAIL` | `GOOGLE` | `APPLE`
 
-## PUT /users/me
+## PUT /users/:userId
+
+Todos os campos do body são opcionais — envie apenas os que deseja atualizar.
 
 ```json
-// Request
-{ "fullName": "Novo Nome", "profileImageUrl": "..." }
+// Request (todos opcionais)
+{
+  "fullName": "Novo Nome",
+  "email": "novo@email.com",
+  "profileImageUrl": "https://example.com/image.jpg"
+}
 // Response 200
-{ "user": ApiUser }
+{
+  "id": "uuid",
+  "email": "...",
+  "fullName": "...",
+  "profileImageUrl": "..."
+}
 ```
+
+Respostas: `200` sucesso · `401` não autenticado · `404` usuário não encontrado · `422` erro de validação
 
 Hook: [[Hooks/useUpdateProfile]]
 

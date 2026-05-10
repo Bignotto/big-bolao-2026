@@ -16,7 +16,7 @@ The app is used at night, around kick-off, with friends present. The interface s
 
 ### Anti-patterns
 - No neon greens or gambling-app aggression — the lime is precise, not garish.
-- No light-mode-first assumptions — dark is the primary experience.
+- Dark-only — light mode is not supported. `app.json` sets `userInterfaceStyle: "dark"` and the nav theme is hardcoded to `DarkTheme`. There is no light-mode token set or theme variant.
 - No orange/gold as primary CTA — those are now demoted to signal tokens.
 
 ---

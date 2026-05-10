@@ -46,7 +46,7 @@ tokens.radius.card
 
 ## tournament.ts
 
-Dados estáticos do torneio Copa do Mundo 2026:
+Dados estáticos do torneio Mundial 2026:
 - Lista de grupos (A–H)
 - Seleções participantes
 - Configuração de fases

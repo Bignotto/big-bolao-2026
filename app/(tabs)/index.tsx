@@ -49,7 +49,7 @@ function SkeletonCard() {
   return (
     <Animated.View
       style={[
-        s.card,
+        s.skelCard,
         { backgroundColor: theme.colors.ink850, borderColor: theme.colors.ink800, opacity },
       ]}
     >
@@ -64,25 +64,62 @@ function SkeletonCard() {
 
 function CountdownCard({ onPress }: { onPress: () => void }) {
   const theme = useTheme();
+  const c = theme.colors;
   const days = daysUntil(TOURNAMENT_START_DATE);
   if (days <= 0) return null;
 
   return (
     <Pressable
       onPress={onPress}
-      style={[s.countdownCard, { borderColor: 'rgba(200,255,62,0.2)' }]}
+      style={[s.countdownCard, { backgroundColor: 'rgba(200,255,62,0.04)', borderColor: 'rgba(200,255,62,0.15)' }]}
     >
-      <Text style={[s.countdownDays, { color: theme.colors.pitch }]}>{days}</Text>
-      <View style={s.countdownMid}>
-        <Text style={[s.countdownLabel, { color: theme.colors.ink100 }]}>
-          dias para a abertura
-        </Text>
-        <Text style={[s.countdownSub, { color: theme.colors.ink400 }]}>
-          {TOURNAMENT_OPENING_DATE_LABEL} · {TOURNAMENT_OPENING_MATCHUP}
-        </Text>
+      {/* Top row */}
+      <View style={s.countdownTopRow}>
+        <Text style={[s.countdownBadge, { color: c.pitch }]}>MUNDIAL 2026</Text>
+        <Text style={s.countdownEmoji}>⚽</Text>
       </View>
-      <Ionicons name="chevron-forward" size={18} color={theme.colors.ink400} />
+
+      {/* Hero: big number + info */}
+      <View style={s.countdownMain}>
+        <View style={s.countdownNumWrap}>
+          <Text style={[s.countdownDays, { color: c.pitch }]}>{days}</Text>
+          <Text style={[s.countdownUnit, { color: c.pitch }]}>
+            {days === 1 ? 'DIA' : 'DIAS'}
+          </Text>
+        </View>
+        <View style={s.countdownRight}>
+          <Text style={[s.countdownLabel, { color: c.ink100 }]}>
+            para a abertura
+          </Text>
+          <Text style={[s.countdownSub, { color: c.ink400 }]}>
+            {TOURNAMENT_OPENING_DATE_LABEL}
+          </Text>
+          <Text style={[s.countdownSub, { color: c.ink500 }]}>
+            {TOURNAMENT_OPENING_MATCHUP}
+          </Text>
+        </View>
+      </View>
+
+      {/* Footer CTA */}
+      <View style={[s.countdownFooter, { borderTopColor: 'rgba(200,255,62,0.1)' }]}>
+        <Text style={[s.countdownCta, { color: c.ink400 }]}>Ver partidas</Text>
+        <Ionicons name="chevron-forward" size={13} color={c.ink500} />
+      </View>
     </Pressable>
+  );
+}
+
+// ─── Section header ───────────────────────────────────────────────────────────
+
+function SectionHeader({ label, count }: { label: string; count: string }) {
+  const theme = useTheme();
+  const c = theme.colors;
+  return (
+    <View style={s.sectionHeaderRow}>
+      <Text style={[s.sectionHeaderLabel, { color: c.ink500 }]}>{label}</Text>
+      <View style={[s.sectionHeaderLine, { backgroundColor: c.ink800 }]} />
+      <Text style={[s.sectionHeaderCount, { color: c.ink600 }]}>{count}</Text>
+    </View>
   );
 }
 
@@ -90,6 +127,7 @@ function CountdownCard({ onPress }: { onPress: () => void }) {
 
 function PoolCard({ pool, onPress }: { pool: Pool; onPress: () => void }) {
   const theme = useTheme();
+  const c = theme.colors;
 
   const isAdmin = pool.isAdmin ?? pool.isCreator;
   const isFirst = pool.userRank === 1;
@@ -101,107 +139,135 @@ function PoolCard({ pool, onPress }: { pool: Pool; onPress: () => void }) {
   return (
     <Pressable
       onPress={onPress}
-      style={[s.card, { backgroundColor: theme.colors.ink850, borderColor: theme.colors.ink800 }]}
+      style={[
+        s.card,
+        {
+          backgroundColor: c.ink850,
+          borderColor: isFirst ? 'rgba(200,255,62,0.25)' : c.ink800,
+        },
+      ]}
     >
-      {/* Leader accent strip */}
-      {isFirst && <View style={s.accentStrip} />}
+      {/* Left accent strip for #1 */}
+      {isFirst && <View style={[s.accentStrip, { backgroundColor: c.pitch }]} />}
 
-      {/* Eyebrow */}
-      <View style={s.eyebrowRow}>
-        {isAdmin ? (
+      <View style={s.cardInner}>
+        {/* Eyebrow */}
+        <View style={s.eyebrowRow}>
+          {isAdmin ? (
+            <>
+              <View style={[s.adminBadge, { backgroundColor: 'rgba(200,255,62,0.1)' }]}>
+                <Text style={[s.adminBadgeTxt, { color: c.pitch }]}>ADMIN</Text>
+              </View>
+              <Text style={[s.eyebrowTxt, { color: c.ink500 }]}>
+                {' · '}{pool.participantsCount} participante{pool.participantsCount !== 1 ? 's' : ''}
+              </Text>
+            </>
+          ) : (
+            <>
+              {pool.isPrivate && (
+                <Ionicons name="lock-closed" size={10} color={c.ink500} style={{ marginRight: 3 }} />
+              )}
+              <Text style={[s.eyebrowTxt, { color: c.ink500 }]}>
+                {visibility} · {pool.participantsCount} participante{pool.participantsCount !== 1 ? 's' : ''}
+              </Text>
+            </>
+          )}
+        </View>
+
+        {/* Name */}
+        <Text style={[s.poolName, { color: c.ink100 }]} numberOfLines={1}>
+          {pool.name}
+        </Text>
+
+        {/* Description */}
+        {!!pool.description && (
+          <Text style={[s.poolDesc, { color: c.ink400 }]} numberOfLines={1}>
+            {pool.description}
+          </Text>
+        )}
+
+        {/* Stats */}
+        {hasStats && (
           <>
-            <View style={s.adminBadge}>
-              <Text style={[s.adminBadgeTxt, { color: theme.colors.pitch }]}>ADMIN</Text>
+            <View style={[s.divider, { backgroundColor: c.ink800 }]} />
+            <View style={s.statsRow}>
+              <View style={s.statBlock}>
+                <Text style={[s.statLabel, { color: c.ink500 }]}>RANK</Text>
+                <View style={s.rankInline}>
+                  <Text style={[s.rankNum, { color: isFirst ? c.pitch : c.ink100 }]}>
+                    #{pool.userRank}
+                  </Text>
+                  <Text style={[s.rankTotal, { color: c.ink500 }]}>
+                    /{pool.participantsCount}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={{ flex: 1 }} />
+
+              {showDeadline && (
+                <View
+                  style={[
+                    s.urgencyChip,
+                    { backgroundColor: 'rgba(255,176,32,0.1)', borderColor: 'rgba(255,176,32,0.3)' },
+                  ]}
+                >
+                  <View style={[s.urgencyDot, { backgroundColor: c.signalAmber }]} />
+                  <Text style={[s.urgencyTxt, { color: c.signalAmber }]}>
+                    <Text style={s.urgencyCount}>{pool.pendingDeadlineCount}</Text>
+                    {' '}palpites vencem hoje
+                  </Text>
+                </View>
+              )}
+
+              {showDelta && (
+                <View style={s.deltaRow}>
+                  {pool.userPoints != null && (
+                    <Text style={[s.deltaTxt, { color: c.ink400 }]}>
+                      {pool.userPoints} pts
+                    </Text>
+                  )}
+                  <Text
+                    style={[
+                      s.deltaTxt,
+                      {
+                        color: pool.rankDelta! > 0 ? c.signalWin : c.signalLose,
+                        marginLeft: 6,
+                      },
+                    ]}
+                  >
+                    {pool.rankDelta! > 0 ? '↑' : '↓'}{Math.abs(pool.rankDelta!)}
+                  </Text>
+                </View>
+              )}
             </View>
-            <Text style={[s.eyebrowTxt, { color: theme.colors.ink500 }]}>
-              {' · '}{pool.participantsCount} participante{pool.participantsCount !== 1 ? 's' : ''}
-            </Text>
-          </>
-        ) : (
-          <>
-            {pool.isPrivate && (
-              <Ionicons name="lock-closed" size={10} color={theme.colors.ink500} style={{ marginRight: 3 }} />
-            )}
-            <Text style={[s.eyebrowTxt, { color: theme.colors.ink500 }]}>
-              {visibility} · {pool.participantsCount} participante{pool.participantsCount !== 1 ? 's' : ''}
-            </Text>
           </>
         )}
       </View>
-
-      {/* Name */}
-      <Text style={[s.poolName, { color: theme.colors.ink100 }]} numberOfLines={1}>
-        {pool.name}
-      </Text>
-
-      {/* Description */}
-      {!!pool.description && (
-        <Text style={[s.poolDesc, { color: theme.colors.ink400 }]} numberOfLines={1}>
-          {pool.description}
-        </Text>
-      )}
-
-      {/* Stats */}
-      {hasStats && (
-        <>
-          <View style={[s.divider, { backgroundColor: theme.colors.ink800 }]} />
-          <View style={s.statsRow}>
-            {/* Rank */}
-            <View style={s.statBlock}>
-              <Text style={[s.statLabel, { color: theme.colors.ink500 }]}>RANK</Text>
-              <View style={s.rankInline}>
-                <Text style={[s.rankNum, { color: isFirst ? theme.colors.pitch : theme.colors.ink100 }]}>
-                  #{pool.userRank}
-                </Text>
-                <Text style={[s.rankTotal, { color: theme.colors.ink500 }]}>
-                  /{pool.participantsCount}
-                </Text>
-              </View>
-            </View>
-
-            <View style={{ flex: 1 }} />
-
-            {/* Urgency chip */}
-            {showDeadline && (
-              <View
-                style={[
-                  s.urgencyChip,
-                  { backgroundColor: 'rgba(255,176,32,0.1)', borderColor: 'rgba(255,176,32,0.3)' },
-                ]}
-              >
-                <View style={[s.urgencyDot, { backgroundColor: theme.colors.signalAmber }]} />
-                <Text style={[s.urgencyTxt, { color: theme.colors.signalAmber }]}>
-                  <Text style={s.urgencyCount}>{pool.pendingDeadlineCount}</Text>
-                  {' '}palpites vencem hoje
-                </Text>
-              </View>
-            )}
-
-            {/* Points + rank delta */}
-            {showDelta && (
-              <View style={s.deltaRow}>
-                {pool.userPoints != null && (
-                  <Text style={[s.deltaTxt, { color: theme.colors.ink400 }]}>
-                    {pool.userPoints} pts
-                  </Text>
-                )}
-                <Text
-                  style={[
-                    s.deltaTxt,
-                    {
-                      color: pool.rankDelta! > 0 ? theme.colors.signalWin : theme.colors.signalLose,
-                      marginLeft: 6,
-                    },
-                  ]}
-                >
-                  {pool.rankDelta! > 0 ? '↑' : '↓'}{Math.abs(pool.rankDelta!)}
-                </Text>
-              </View>
-            )}
-          </View>
-        </>
-      )}
     </Pressable>
+  );
+}
+
+// ─── Empty state ──────────────────────────────────────────────────────────────
+
+function EmptyState({ onJoin }: { onJoin: () => void }) {
+  const theme = useTheme();
+  const c = theme.colors;
+  return (
+    <View style={s.emptyWrap}>
+      <Text style={s.emptyEmoji}>⚽</Text>
+      <Text style={[s.emptyTitle, { color: c.ink100 }]}>Nenhum bolão ainda</Text>
+      <Text style={[s.emptyBody, { color: c.ink500 }]}>
+        Crie um bolão para a galera ou entre em um grupo com um código de convite.
+      </Text>
+      <Pressable
+        onPress={onJoin}
+        style={[s.emptyBtn, { backgroundColor: c.ink800, borderColor: c.ink700 }]}
+      >
+        <Ionicons name="add-circle-outline" size={18} color={c.ink300} />
+        <Text style={[s.emptyBtnTxt, { color: c.ink300 }]}>Criar ou entrar em um grupo</Text>
+      </Pressable>
+    </View>
   );
 }
 
@@ -244,7 +310,7 @@ export default function DashboardScreen() {
 
   const listHeader = (
     <>
-      {/* Greeting + title */}
+      {/* Greeting + hero */}
       <View style={s.header}>
         <View style={s.headerLeft}>
           <Text style={[s.greeting, { color: theme.colors.ink500 }]}>
@@ -254,22 +320,32 @@ export default function DashboardScreen() {
             Seus bolões<Text style={{ color: theme.colors.pitch }}>.</Text>
           </Text>
           <Text style={[s.subtitle, { color: theme.colors.ink400 }]}>
-            {pools.length} grupo{pools.length !== 1 ? 's' : ''}
+            {pools.length > 0
+              ? `${pools.length} grupo${pools.length !== 1 ? 's' : ''}`
+              : 'bem-vindo ao app'}
             {totalPending > 0
               ? ` · ${totalPending} palpite${totalPending !== 1 ? 's' : ''} pendente${totalPending !== 1 ? 's' : ''}`
               : ''}
           </Text>
         </View>
-        <View style={{ marginLeft: 16 }}>
+
+        {/* Avatar — taps to profile, shows amber dot when palpites pending */}
+        <Pressable
+          onPress={() => router.push('/(tabs)/profile')}
+          style={s.avatarWrap}
+        >
           <AppAvatar
             imagePath={apiUser?.profileImageUrl ?? undefined}
             name={firstName}
-            size={36}
+            size={40}
           />
-        </View>
+          {totalPending > 0 && (
+            <View style={[s.pendingDot, { backgroundColor: theme.colors.signalAmber }]} />
+          )}
+        </Pressable>
       </View>
 
-      {/* Live match cards — shown above countdown when a predicted match is active */}
+      {/* Live match cards */}
       {liveMatchesWithMyPredictions.length > 0 && (
         <View style={{ gap: 10, marginBottom: 12 }}>
           {liveMatchesWithMyPredictions.map((entry) => (
@@ -285,7 +361,15 @@ export default function DashboardScreen() {
       {/* Countdown */}
       <CountdownCard onPress={() => router.push('/(tabs)/matches')} />
 
-      <View style={{ height: 20 }} />
+      {/* Section header — only when there are (or will be) pools */}
+      {(pools.length > 0 || loading) && (
+        <View style={s.sectionGap}>
+          <SectionHeader
+            label="MEUS BOLÕES"
+            count={loading ? '···' : String(pools.length)}
+          />
+        </View>
+      )}
     </>
   );
 
@@ -296,11 +380,7 @@ export default function DashboardScreen() {
       <SkeletonCard />
     </View>
   ) : (
-    <View style={s.emptyWrap}>
-      <Text style={[s.emptyTxt, { color: theme.colors.ink500 }]}>
-        Você ainda não está em nenhum grupo.
-      </Text>
-    </View>
+    <EmptyState onJoin={handleJoin} />
   );
 
   return (
@@ -312,7 +392,7 @@ export default function DashboardScreen() {
         ListEmptyComponent={emptyContent}
         ListFooterComponent={
           <View style={{ marginTop: pools.length > 0 || loading ? 10 : 0 }}>
-            <JoinButton onPress={handleJoin} />
+            {pools.length > 0 && <JoinButton onPress={handleJoin} />}
             <View style={{ height: 90 }} />
           </View>
         }
@@ -333,14 +413,14 @@ export default function DashboardScreen() {
 
 const s = StyleSheet.create({
   root: { flex: 1 },
-  listContent: { paddingHorizontal: 20 },
+  listContent: { paddingHorizontal: 16 },
 
   // ── Header ──
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingTop: 0,
-    paddingBottom: 24,
+    alignItems: 'flex-start',
+    paddingTop: 16,
+    paddingBottom: 20,
   },
   headerLeft: { flex: 1 },
   greeting: {
@@ -351,9 +431,9 @@ const s = StyleSheet.create({
   },
   heroTitle: {
     fontFamily: TypographyFamilies.display,
-    fontSize: 40,
+    fontSize: 42,
     letterSpacing: -1.28,
-    lineHeight: 46,
+    lineHeight: 48,
     includeFontPadding: false,
     marginTop: 4,
   },
@@ -363,35 +443,115 @@ const s = StyleSheet.create({
     marginTop: 4,
     includeFontPadding: false,
   },
+  avatarWrap: {
+    marginLeft: 16,
+    marginTop: 18,
+  },
+  pendingDot: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    borderWidth: 2,
+    borderColor: '#0D0D0D',
+  },
 
   // ── Countdown ──
   countdownCard: {
+    borderRadius: 20,
+    borderWidth: 1,
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    overflow: 'hidden',
+  },
+  countdownTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  countdownBadge: {
+    fontFamily: TypographyFamilies.mono,
+    fontSize: 10,
+    letterSpacing: 1.2,
+    includeFontPadding: false,
+  },
+  countdownEmoji: { fontSize: 18 },
+  countdownMain: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
-    borderRadius: 18,
-    borderWidth: 1,
-    paddingHorizontal: 20,
-    paddingVertical: 18,
-    backgroundColor: 'rgba(200,255,62,0.05)',
+    marginBottom: 16,
+  },
+  countdownNumWrap: {
+    alignItems: 'flex-end',
+    gap: 0,
   },
   countdownDays: {
     fontFamily: TypographyFamilies.display,
-    fontSize: 40,
-    letterSpacing: -1.6,
+    fontSize: 72,
+    letterSpacing: -4,
     includeFontPadding: false,
-    minWidth: 52,
+    lineHeight: 68,
   },
-  countdownMid: { flex: 1 },
+  countdownUnit: {
+    fontFamily: TypographyFamilies.mono,
+    fontSize: 10,
+    letterSpacing: 1.5,
+    includeFontPadding: false,
+    alignSelf: 'flex-end',
+  },
+  countdownRight: {
+    flex: 1,
+    gap: 3,
+  },
   countdownLabel: {
-    fontFamily: TypographyFamilies.sansMedium,
-    fontSize: 14,
+    fontFamily: TypographyFamilies.sansSemi,
+    fontSize: 16,
     includeFontPadding: false,
   },
   countdownSub: {
     fontFamily: TypographyFamilies.sans,
+    fontSize: 13,
+    includeFontPadding: false,
+  },
+  countdownFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    gap: 4,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+  },
+  countdownCta: {
+    fontFamily: TypographyFamilies.sansMedium,
     fontSize: 12,
-    marginTop: 2,
+    includeFontPadding: false,
+  },
+
+  // ── Section header ──
+  sectionGap: { marginTop: 28, marginBottom: 14 },
+  sectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  sectionHeaderLabel: {
+    fontFamily: TypographyFamilies.mono,
+    fontSize: 10,
+    letterSpacing: 1.2,
+    includeFontPadding: false,
+  },
+  sectionHeaderLine: {
+    flex: 1,
+    height: StyleSheet.hairlineWidth,
+  },
+  sectionHeaderCount: {
+    fontFamily: TypographyFamilies.mono,
+    fontSize: 10,
+    letterSpacing: 0.5,
     includeFontPadding: false,
   },
 
@@ -399,16 +559,16 @@ const s = StyleSheet.create({
   card: {
     borderRadius: 20,
     borderWidth: 1,
-    padding: 18,
     overflow: 'hidden',
+    flexDirection: 'row',
   },
   accentStrip: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 3,
-    backgroundColor: '#C8FF3E',
+    width: 4,
+    alignSelf: 'stretch',
+  },
+  cardInner: {
+    flex: 1,
+    padding: 18,
   },
   eyebrowRow: {
     flexDirection: 'row',
@@ -416,7 +576,6 @@ const s = StyleSheet.create({
     marginBottom: 6,
   },
   adminBadge: {
-    backgroundColor: 'rgba(200,255,62,0.1)',
     borderRadius: 4,
     paddingHorizontal: 6,
     paddingVertical: 2,
@@ -526,17 +685,51 @@ const s = StyleSheet.create({
   },
 
   // ── Skeleton ──
+  skelCard: {
+    borderRadius: 20,
+    borderWidth: 1,
+    padding: 18,
+    overflow: 'hidden',
+  },
   skelLine: { borderRadius: 6 },
 
-  // ── Empty ──
+  // ── Empty state ──
   emptyWrap: {
-    paddingVertical: 32,
+    paddingTop: 48,
+    paddingBottom: 32,
     alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 24,
   },
-  emptyTxt: {
+  emptyEmoji: {
+    fontSize: 40,
+    marginBottom: 8,
+  },
+  emptyTitle: {
+    fontFamily: TypographyFamilies.sansSemi,
+    fontSize: 18,
+    includeFontPadding: false,
+  },
+  emptyBody: {
     fontFamily: TypographyFamilies.sans,
     fontSize: 14,
     textAlign: 'center',
+    lineHeight: 21,
+    includeFontPadding: false,
+  },
+  emptyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+  },
+  emptyBtnTxt: {
+    fontFamily: TypographyFamilies.sansMedium,
+    fontSize: 14,
     includeFontPadding: false,
   },
 });
