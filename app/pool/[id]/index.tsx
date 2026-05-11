@@ -53,6 +53,7 @@ import MatchFilterControls, {
 import { TypographyFamilies } from '@/constants/tokens';
 import RankingShareCard from '@/components/AppComponents/RankingShareCard';
 import { useShareRanking } from '@/hooks/useShareRanking';
+import { useTournament } from '@/hooks/useTournament';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -521,6 +522,7 @@ export default function PoolDetailsScreen() {
   const cardRef = useRef<View>(null);
   const shareDate = new Date().toLocaleDateString('pt-BR');
   const { shareRanking, sharing } = useShareRanking(cardRef);
+  const { completedMatches, totalMatches: tournamentTotalMatches } = useTournament();
 
   // ── Data ────────────────────────────────────────────────────────────────────
 
@@ -886,6 +888,8 @@ export default function PoolDetailsScreen() {
           poolName={pool.name}
           entries={leaderboardEntries}
           date={shareDate}
+          completedMatches={completedMatches}
+          totalMatches={tournamentTotalMatches}
         />
       </View>
     </SafeAreaView>

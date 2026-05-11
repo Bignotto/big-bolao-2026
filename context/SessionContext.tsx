@@ -30,7 +30,7 @@ async function fetchOrCreateApiUser(session: Session): Promise<ApiUser | null> {
 
   // Unexpected error — cannot recover without a cache
   if (checkRes.status !== 404) {
-    console.error('[SessionContext] GET /users/me unexpected status:', checkRes.status);
+    if (__DEV__) console.error('[SessionContext] GET /users/me unexpected status:', checkRes.status);
     return null;
   }
 
@@ -55,11 +55,12 @@ async function fetchOrCreateApiUser(session: Session): Promise<ApiUser | null> {
   });
 
   if (!createRes.ok) {
-    console.error(
-      '[SessionContext] POST /users failed:',
-      createRes.status,
-      await createRes.json().catch(() => ({})),
-    );
+    if (__DEV__)
+      console.error(
+        '[SessionContext] POST /users failed:',
+        createRes.status,
+        await createRes.json().catch(() => ({})),
+      );
     return null;
   }
 
