@@ -1,5 +1,5 @@
 import { forwardRef } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, Image, StyleSheet } from 'react-native';
 import type { LeaderboardEntry } from '@/components/AppComponents/LeaderboardRow';
 import AppAvatar from '@/components/AppComponents/AppAvatar';
 import { TypographyFamilies } from '@/constants/tokens';
@@ -27,11 +27,13 @@ interface Props {
   poolName: string;
   entries: LeaderboardEntry[];
   date: string;
+  completedMatches?: number;
+  totalMatches?: number;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-const RankingShareCard = forwardRef<View, Props>(({ poolName, entries, date }, ref) => {
+const RankingShareCard = forwardRef<View, Props>(({ poolName, entries, date, completedMatches, totalMatches }, ref) => {
   const top = entries.slice(0, MAX_ENTRIES);
 
   return (
@@ -60,9 +62,18 @@ const RankingShareCard = forwardRef<View, Props>(({ poolName, entries, date }, r
             <Text style={[s.name, isFirst && s.nameFirst]} numberOfLines={1}>
               {entry.user.name}
             </Text>
-            <Text style={[s.points, isFirst && s.pointsFirst]}>
-              {entry.totalPoints}
-            </Text>
+            <View style={s.pointsWrap}>
+              <Text style={[s.points, isFirst && s.pointsFirst]}>
+                {entry.exactScoresCount}
+              </Text>
+              <Text style={[s.ptsLabel, isFirst && s.ptsLabelFirst]}>exatos</Text>
+            </View>
+            <View style={[s.pointsWrap, { marginLeft: 12 }]}>
+              <Text style={[s.points, isFirst && s.pointsFirst]}>
+                {entry.totalPoints}
+              </Text>
+              <Text style={[s.ptsLabel, isFirst && s.ptsLabelFirst]}>pts</Text>
+            </View>
           </View>
         );
       })}
@@ -70,8 +81,30 @@ const RankingShareCard = forwardRef<View, Props>(({ poolName, entries, date }, r
       {/* Separator */}
       <View style={[s.divider, { marginTop: 4 }]} />
 
+      {/* Stats */}
+      {totalMatches != null && totalMatches > 0 && (
+        <Text style={s.stats}>
+          {completedMatches} de {totalMatches} partidas disputadas
+          {' · '}
+          {((completedMatches! / totalMatches) * 100).toLocaleString('pt-BR', {
+            minimumFractionDigits: 1,
+            maximumFractionDigits: 1,
+          })}%
+        </Text>
+      )}
+
       {/* Watermark */}
-      <Text style={s.watermark}>bigbolao · {date}</Text>
+      <View style={s.watermarkRow}>
+        <Image
+          source={require('@/assets/images/icon.png')}
+          style={s.watermarkIcon}
+          resizeMode="contain"
+        />
+        <Text style={s.watermarkName}>
+          Big Bolão<Text style={{ color: C.pitch }}>.</Text>
+        </Text>
+        <Text style={s.watermarkDate}>{date}</Text>
+      </View>
     </View>
   );
 });
@@ -145,6 +178,9 @@ const s = StyleSheet.create({
     fontFamily: TypographyFamilies.sansSemi,
     color: C.orange,
   },
+  pointsWrap: {
+    alignItems: 'flex-end',
+  },
   points: {
     fontFamily: TypographyFamilies.display,
     fontSize: 22,
@@ -155,12 +191,48 @@ const s = StyleSheet.create({
   pointsFirst: {
     color: C.orange,
   },
-  watermark: {
+  ptsLabel: {
+    fontFamily: TypographyFamilies.mono,
+    fontSize: 9,
+    letterSpacing: 0.5,
+    color: C.ink500,
+    includeFontPadding: false,
+    marginTop: -3,
+  },
+  ptsLabelFirst: {
+    color: C.orange,
+  },
+  stats: {
     fontFamily: TypographyFamilies.mono,
     fontSize: 10,
-    color: C.ink700,
+    color: C.ink500,
     textAlign: 'right',
+    marginTop: 10,
+    includeFontPadding: false,
+  },
+  watermarkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginTop: 12,
+    gap: 6,
+  },
+  watermarkIcon: {
+    width: 18,
+    height: 18,
+    borderRadius: 4,
+  },
+  watermarkName: {
+    fontFamily: TypographyFamilies.display,
+    fontSize: 16,
+    letterSpacing: -0.4,
+    color: C.ink100,
+    includeFontPadding: false,
+    flex: 1,
+  },
+  watermarkDate: {
+    fontFamily: TypographyFamilies.mono,
+    fontSize: 10,
+    color: C.ink500,
     includeFontPadding: false,
   },
 });

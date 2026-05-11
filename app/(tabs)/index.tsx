@@ -358,8 +358,10 @@ export default function DashboardScreen() {
         </View>
       )}
 
-      {/* Countdown */}
-      <CountdownCard onPress={() => router.push('/(tabs)/matches')} />
+      {/* Countdown — hidden once matches are live */}
+      {liveMatchesWithMyPredictions.length === 0 && (
+        <CountdownCard onPress={() => router.push('/(tabs)/matches')} />
+      )}
 
       {/* Section header — only when there are (or will be) pools */}
       {(pools.length > 0 || loading) && (
@@ -486,7 +488,7 @@ const s = StyleSheet.create({
     marginBottom: 16,
   },
   countdownNumWrap: {
-    alignItems: 'flex-end',
+    alignItems: 'center',
     gap: 0,
   },
   countdownDays: {
@@ -501,7 +503,6 @@ const s = StyleSheet.create({
     fontSize: 10,
     letterSpacing: 1.5,
     includeFontPadding: false,
-    alignSelf: 'flex-end',
   },
   countdownRight: {
     flex: 1,

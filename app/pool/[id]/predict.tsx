@@ -199,8 +199,8 @@ export default function PredictScreen() {
   const interpretation = getInterpretation(
     homeScore,
     awayScore,
-    match.homeTeam.countryCode ?? match.homeTeam.name,
-    match.awayTeam.countryCode ?? match.awayTeam.name,
+    match.homeTeam.name ?? match.homeTeam.countryCode,
+    match.awayTeam.name ?? match.awayTeam.countryCode,
     rules,
   );
 
@@ -262,7 +262,7 @@ export default function PredictScreen() {
           <View style={s.teamCol}>
             <Flag flagUrl={match.homeTeam.flagUrl} countryCode={match.homeTeam.countryCode} />
             <Text style={[s.teamName, { color: theme.colors.ink100 }]}>
-              {match.homeTeam.countryCode ?? match.homeTeam.name}
+              {match.homeTeam.name ?? match.homeTeam.countryCode}
             </Text>
             <View style={{ height: 16 }} />
             <ScoreStepper value={homeScore} onChange={setHomeScore} accent disabled={locked} />
@@ -275,7 +275,7 @@ export default function PredictScreen() {
           <View style={s.teamCol}>
             <Flag flagUrl={match.awayTeam.flagUrl} countryCode={match.awayTeam.countryCode} />
             <Text style={[s.teamName, { color: theme.colors.ink100 }]}>
-              {match.awayTeam.countryCode ?? match.awayTeam.name}
+              {match.awayTeam.name ?? match.awayTeam.countryCode}
             </Text>
             <View style={{ height: 16 }} />
             <ScoreStepper value={awayScore} onChange={setAwayScore} accent disabled={locked} />
