@@ -16,6 +16,7 @@
     "ios": {
       "bundleIdentifier": "com.bignotto.bigbolao2026",
       "buildNumber": "1",
+      "deploymentTarget": "16.0",
       "supportsTablet": false,
       "usesAppleSignIn": true,
       "infoPlist": {
