@@ -18,7 +18,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 import { useMe } from '@/hooks/useMe';
-import { useUpdateProfile, useLogout } from '@/hooks/useUpdateProfile';
+import { useUpdateProfile, useLogout, useDeleteAccount } from '@/hooks/useUpdateProfile';
 import { useSession } from '@/context/SessionContext';
 import AppAvatar from '@/components/AppComponents/AppAvatar';
 import AppButton from '@/components/AppComponents/AppButton';
@@ -62,6 +62,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const mutation = useUpdateProfile(apiUser?.id ?? '');
   const logout = useLogout();
+  const deleteAccount = useDeleteAccount();
 
   const [name, setName] = useState('');
   const [editing, setEditing] = useState(false);
@@ -102,6 +103,24 @@ export default function ProfileScreen() {
       { text: 'Cancelar', style: 'cancel' },
       { text: 'Sair', style: 'destructive', onPress: logout },
     ]);
+  }
+
+  function handleDeleteAccount() {
+    Alert.alert(
+      'Excluir conta',
+      'Essa ação é permanente e irá remover todos os seus dados: palpites, participações em bolões e histórico. Não é possível desfazer.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Excluir permanentemente',
+          style: 'destructive',
+          onPress: () =>
+            deleteAccount.mutate(undefined, {
+              onError: (e) => Alert.alert('Erro', (e as Error).message),
+            }),
+        },
+      ],
+    );
   }
 
   // ── Render ───────────────────────────────────────────────────────────────────
@@ -291,6 +310,15 @@ export default function ProfileScreen() {
           variant="destructive"
           icon={<Ionicons name="log-out-outline" size={18} color="#fff" />}
           onPress={handleLogout}
+        />
+
+        <View style={s.gap12} />
+        <AppButton
+          title="Excluir conta"
+          variant="destructive"
+          icon={<Ionicons name="trash-outline" size={18} color="#fff" />}
+          onPress={handleDeleteAccount}
+          isLoading={deleteAccount.isPending}
         />
 
         {/* ── Footer ── */}

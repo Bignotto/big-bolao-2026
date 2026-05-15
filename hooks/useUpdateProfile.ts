@@ -52,3 +52,19 @@ export function useLogout() {
     router.replace('/(auth)/login');
   };
 }
+
+export function useDeleteAccount() {
+  const queryClient = useQueryClient();
+  const router = useRouter();
+
+  return useMutation({
+    mutationFn: async () => {
+      await apiFetch('/users/me', { method: 'DELETE' });
+    },
+    onSuccess: async () => {
+      await supabase.auth.signOut();
+      queryClient.clear();
+      router.replace('/(auth)/login');
+    },
+  });
+}
