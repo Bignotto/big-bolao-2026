@@ -1,52 +1,80 @@
-# Big Bolão — API Endpoints
+# Big Bolão API — Endpoints
 
-All endpoints (except GET /health) require Authorization: Bearer <supabase_token>.
+All endpoints require a valid Supabase Bearer token in the `Authorization` header unless noted otherwise.
 
-### Users
+---
 
-- POST /users → create account (no auth required)
-- GET /users/me
-- GET /users/:userId
-- PUT /users/:userId → update profile (body fields all optional: fullName, email, profileImageUrl)
-- GET /users/:userId/pools
-- GET /users/me/pools/standings
-- GET /users/me/predictions (?poolId=) → user's predictions; use for pool detail to avoid per-match N+1
+## Users
 
-### Pools
+| Method   | Path                        | Description                                                           | Auth     |
+| -------- | --------------------------- | --------------------------------------------------------------------- | -------- |
+| `POST`   | `/users`                    | Create a new user account                                             | Required |
+| `GET`    | `/users/:userId`            | Get user profile by ID                                                | Required |
+| `GET`    | `/users/me`                 | Get authenticated user profile                                        | Required |
+| `PUT`    | `/users/:userId`            | Update user profile                                                   | Required |
+| `DELETE` | `/users/me`                 | Permanently delete authenticated user account and all associated data | Required |
+| `GET`    | `/users/:userId/pools`      | List pools the user participates in                                   | Required |
+| `GET`    | `/users/me/predictions`     | Get authenticated user's predictions (filter by `?poolId`)            | Required |
+| `GET`    | `/users/me/pools/standings` | Get authenticated user's standings across all pools                   | Required |
 
-- GET /pools (?page&perPage&name) — paginated public pools
-- POST /pools
-- GET /pools/:poolId
-- PUT /pools/:poolId (owner)
-- GET /pools/:poolId/users
-- POST /pools/:poolId/users (join public)
-- DELETE /pools/:poolId/users/me (leave)
-- DELETE /pools/:poolId/users/:userId (owner only)
-- GET /pools/:poolId/predictions
-- GET /pools/:poolId/standings → all participants including those with 0 predictions
-- PUT /pools/:poolId/scoring-rules (owner; retroactive — warn user)
-- GET /pool-invites/:inviteCode → preview pool
-- POST /pool-invites/:inviteCode → join by invite code
+### DELETE /users/me
 
-### Predictions
+Permanently removes the user account and all associated data: pool participations, predictions, special event predictions, notifications, and leaderboard entries. Required by Apple App Store and Google Play Store guidelines.
 
-- POST /predictions
-- GET /predictions/:predictionId
-- PUT /predictions/:predictionId (locked once match starts)
+For pools the user created: ownership is transferred to the earliest-joined other participant. If no other participants exist, the pool is deleted along with all its data.
 
-### Matches
+- **Response 204** — Account deleted successfully
+- **Response 401** — Missing or invalid token
+- **Response 404** — User not found
 
-- GET /matches/:matchId
-- GET /matches/:matchId/predictions
-- GET /matches/:matchId/predictions/me → user's prediction status across their pools (prediction: null = not submitted)
-- PUT /matches/:matchId (ADMIN only) → update result + matchStatus
+---
 
-### Tournaments
+## Pools
 
-- GET /tournaments
-- GET /tournaments/:tournamentId
-- GET /tournaments/:tournamentId/matches (?stage&status&group&limit&offset)
+| Method   | Path                                          | Description                                             |
+| -------- | --------------------------------------------- | ------------------------------------------------------- |
+| `GET`    | `/pools`                                      | List public pools (optional `?name` filter, pagination) |
+| `POST`   | `/pools`                                      | Create a new pool                                       |
+| `GET`    | `/pools/:poolId`                              | Get pool details                                        |
+| `PUT`    | `/pools/:poolId`                              | Update pool info (owner only)                           |
+| `GET`    | `/pools/:poolId/users`                        | List participants in a pool                             |
+| `POST`   | `/pools/:poolId/users`                        | Join a public pool by ID                                |
+| `DELETE` | `/pools/:poolId/users/me`                     | Leave a pool                                            |
+| `DELETE` | `/pools/:poolId/users/:userId`                | Remove a user from a pool (owner only)                  |
+| `PUT`    | `/pools/:poolId/scoring-rules`                | Update pool scoring rules (owner only)                  |
+| `GET`    | `/pools/:poolId/predictions`                  | Get all predictions in a pool                           |
+| `GET`    | `/pools/:poolId/matches/:matchId/predictions` | Get prediction status per participant for a match       |
+| `GET`    | `/pools/:poolId/standings`                    | Get pool leaderboard                                    |
+| `GET`    | `/pool-invites/:inviteCode`                   | Get pool info by invite code (no join)                  |
+| `POST`   | `/pool-invites/:inviteCode`                   | Join a pool using invite code (public or private)       |
 
-### Health
+---
 
-- GET /health (no auth)
+## Matches
+
+| Method | Path                               | Description                                     |
+| ------ | ---------------------------------- | ----------------------------------------------- |
+| `GET`  | `/matches/:matchId`                | Get match details with team and tournament info |
+| `GET`  | `/matches/:matchId/predictions`    | Get all predictions for a match                 |
+| `GET`  | `/matches/:matchId/predictions/me` | Get authenticated user's prediction for a match |
+| `PUT`  | `/matches/:matchId`                | Update match scores/status (admin only)         |
+
+---
+
+## Predictions
+
+| Method | Path                         | Description                                  |
+| ------ | ---------------------------- | -------------------------------------------- |
+| `POST` | `/predictions`               | Submit a new prediction (before match start) |
+| `GET`  | `/predictions/:predictionId` | Get prediction details                       |
+| `PUT`  | `/predictions/:predictionId` | Update a prediction (before match start)     |
+
+---
+
+## Tournaments
+
+| Method | Path                                 | Description                                                          |
+| ------ | ------------------------------------ | -------------------------------------------------------------------- |
+| `GET`  | `/tournaments`                       | List all tournaments                                                 |
+| `GET`  | `/tournaments/:tournamentId`         | Get tournament details and stats                                     |
+| `GET`  | `/tournaments/:tournamentId/matches` | List matches for a tournament (filter by `stage`, `status`, `group`) |
