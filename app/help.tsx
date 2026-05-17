@@ -101,7 +101,7 @@ export default function HelpScreen() {
               Big Bolão 2026
             </Text>
             <Text style={[s.aboutTagline, { color: c.ink400 }]}>
-              O bolão da sua galera para o Mundial 2026
+              O bolão da sua galera para 2026
             </Text>
             <View style={s.gap12} />
             <Text style={[s.aboutBody, { color: c.ink300 }]}>

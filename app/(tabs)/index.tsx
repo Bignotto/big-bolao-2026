@@ -75,7 +75,7 @@ function CountdownCard({ onPress }: { onPress: () => void }) {
     >
       {/* Top row */}
       <View style={s.countdownTopRow}>
-        <Text style={[s.countdownBadge, { color: c.pitch }]}>MUNDIAL 2026</Text>
+        <Text style={[s.countdownBadge, { color: c.pitch }]}>BOLÃO 2026</Text>
         <Text style={s.countdownEmoji}>⚽</Text>
       </View>
 

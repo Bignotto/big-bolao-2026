@@ -12,7 +12,7 @@
       "distribution": "internal"
     },
     "production": {
-      "autoIncrement": "version",
+      "autoIncrement": true,
       "env": {
         "EXPO_PUBLIC_SUPABASE_URL": "https://kmqurfaofmowoonastqb.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImttcXVyZmFvZm1vd29vbmFzdHFiIiwicm9sZSI6ImFub24iLCJpYXQiOjE2NTA4Nzg2MzcsImV4cCI6MTk2NjQ1NDYzN30.Ws6tHdJzi7xKP5FP-UiEG75pchKxMhXAemnbKnfTfDc",

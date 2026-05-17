@@ -324,7 +324,7 @@ export default function ProfileScreen() {
         {/* ── Footer ── */}
         <View style={s.gap28} />
         <Text style={[s.footer, { color: c.ink500 }]}>
-          BIG BOLÃO · V{APP_VERSION}{'   '}MUNDIAL 2026
+          BIG BOLÃO · V{APP_VERSION}{'   '}BOLÃO 2026
         </Text>
         <View style={s.gap20} />
       </ScrollView>
