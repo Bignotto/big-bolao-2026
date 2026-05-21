@@ -35,6 +35,15 @@ Users create/join tournament pools, submit predictions (score, winner, ET, penal
    Account providers: 'EMAIL' | 'GOOGLE' | 'APPLE'  
    User roles: 'USER' | 'ADMIN'
 
+## Deployment Status
+
+The app is **live on both stores** (as of 2026-05-20):
+- **Google Play Store**: `com.bignotto.bigbolao2026`
+- **Apple App Store**: `com.bignotto.bigbolao2026` (bundle ID), iOS 16+
+- EAS Project ID: `8cbe7c5b-47a7-4835-b02c-bbe4e981e2c4`
+
+> **OTA-first policy**: All code changes must be delivered via EAS Update (OTA). A new native build (EAS Build) is only required when changing native modules, app.json native config, or SDK version. Never instruct the user to submit a new binary for JS/TS/asset-only changes.
+
 ## Key Implementation Notes for Mobile
 
 1. Always handle null values (scores, images, deadlines)
@@ -48,6 +57,7 @@ Users create/join tournament pools, submit predictions (score, winner, ET, penal
 9. Matches list screen is prediction-free; load predictions only on detail screen via GET /matches/:matchId/predictions/me
 10. Pool detail prediction status uses GET /users/me/predictions?poolId=...; do not reintroduce per-match N+1 prediction requests
 11. Profile updates use backend `fullName`, not a UI-only `name` field
+12. **OTA updates**: JS/TS/asset changes → `eas update --branch production`. New native build only when native code or app.json native config changes.
 
 ## Backend Stack
 

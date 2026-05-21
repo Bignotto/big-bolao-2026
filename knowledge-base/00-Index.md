@@ -1,7 +1,7 @@
 ---
 title: Big Bolão 2026 — Map of Content
 tags: [index, MOC]
-updated: 2026-04-17
+updated: 2026-05-20
 ---
 
 # Big Bolão 2026 — Base de Conhecimento
@@ -13,12 +13,22 @@ updated: 2026-04-17
 
 ---
 
+## 🚀 Status do Projeto
+
+> [!success] App em produção desde 2026-05-20
+> Publicado na **App Store** e **Google Play Store**.
+> Bundle: `com.bignotto.bigbolao2026` | EAS ID: `8cbe7c5b-47a7-4835-b02c-bbe4e981e2c4`
+> **Todas as mudanças de código devem ser entregues via OTA (EAS Update).** Ver [[Architecture/Deploy-Mobile]].
+
+---
+
 ## 🏗️ Arquitetura & Visão Geral
 
 - [[Architecture/Visao-Geral]] — Propósito do app, stack e camadas
 - [[Architecture/Stack-Tecnologica]] — Todas as dependências com versão e papel
 - [[Architecture/Fluxos-Principais]] — Jornadas do usuário (auth, bolão, palpite)
 - [[Architecture/Estrutura-de-Pastas]] — Mapa completo do projeto
+- [[Architecture/Deploy-Mobile]] — EAS Build, EAS Update (OTA), lojas
 
 ---
 
