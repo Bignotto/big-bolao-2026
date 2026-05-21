@@ -39,7 +39,7 @@ const RankingShareCard = forwardRef<View, Props>(({ poolName, entries, date, com
   return (
     <View ref={ref} style={s.card} collapsable={false}>
       {/* Eyebrow */}
-      <Text style={s.eyebrow}>MUNDIAL 2026 · BIG BOLÃO</Text>
+      <Text style={s.eyebrow}>BOLÃO 2026 · BIG BOLÃO</Text>
 
       {/* Pool name */}
       <Text style={s.poolName} numberOfLines={2}>{poolName}</Text>

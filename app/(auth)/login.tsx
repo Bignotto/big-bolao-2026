@@ -115,7 +115,7 @@ export default function LoginScreen() {
         {/* Tournament badge */}
         <View style={[s.badge, { borderColor: 'rgba(200,255,62,0.22)', backgroundColor: 'rgba(200,255,62,0.06)' }]}>
           <Text style={s.badgeEmoji}>⚽</Text>
-          <Text style={[s.badgeTxt, { color: c.pitch }]}>MUNDIAL 2026</Text>
+          <Text style={[s.badgeTxt, { color: c.pitch }]}>BOLÃO 2026</Text>
         </View>
 
         {/* App name */}
@@ -159,7 +159,7 @@ export default function LoginScreen() {
             ) : (
               <AppleAuthentication.AppleAuthenticationButton
                 buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
-                buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
                 cornerRadius={10}
                 style={{ width: '100%', height: 48 }}
                 onPress={handleAppleSignIn}

@@ -1,7 +1,7 @@
 ---
 title: Stack Tecnológica
 tags: [architecture, stack, dependencies]
-updated: 2026-04-17
+updated: 2026-05-20
 ---
 
 # Stack Tecnológica
@@ -71,6 +71,21 @@ Ver: [[Utils/Constants]]
 | `expo-font` | Carregamento de fontes |
 | `expo-splash-screen` | Controle da splash |
 | `expo-dev-client` | Dev build customizado |
+
+## Deploy & OTA
+
+| Serviço | Papel |
+|---------|-------|
+| `eas build` | Gera binário nativo (.ipa / .aab) para App Store / Google Play |
+| `eas update` | Publica atualização OTA (JS/assets) sem novo binário |
+| `eas submit` | Envia binário direto para as lojas via CLI |
+
+**EAS Project ID:** `8cbe7c5b-47a7-4835-b02c-bbe4e981e2c4`
+
+> [!important] OTA-first
+> O app está publicado nas lojas. Alterações em JS/TS/assets → `eas update --branch production`. Novo build nativo apenas para mudanças nativas.
+
+Ver: [[Architecture/Deploy-Mobile]]
 
 ## Dev / Qualidade
 

@@ -14,12 +14,18 @@ export type ApiUser = {
   role: 'USER' | 'ADMIN';
 };
 
+function fetchWithTimeout(input: string, init: RequestInit, timeoutMs = 10000): Promise<Response> {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(input, { ...init, signal: controller.signal }).finally(() => clearTimeout(id));
+}
+
 async function fetchOrCreateApiUser(session: Session): Promise<ApiUser | null> {
   const token = session.access_token;
   const supabaseUser = session.user;
 
   // Try to fetch existing user from API
-  const checkRes = await fetch(`${API_URL}/users/me`, {
+  const checkRes = await fetchWithTimeout(`${API_URL}/users/me`, {
     headers: { Authorization: `Bearer ${token}` },
   });
 
@@ -39,7 +45,7 @@ async function fetchOrCreateApiUser(session: Session): Promise<ApiUser | null> {
   const fullName: string = meta.full_name ?? meta.name ?? supabaseUser.email ?? 'User';
   const profileImageUrl: string | null = meta.avatar_url ?? meta.picture ?? null;
 
-  const createRes = await fetch(`${API_URL}/users`, {
+  const createRes = await fetchWithTimeout(`${API_URL}/users`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

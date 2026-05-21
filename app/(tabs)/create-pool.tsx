@@ -92,7 +92,7 @@ export default function CreatePoolScreen() {
             <Text style={[s.heroTitle, { color: c.ink100 }]}>
               Novo Grupo<Text style={{ color: c.pitch }}>.</Text>
             </Text>
-            <Text style={[s.subtitle, { color: c.ink400 }]}>Mundial 2026</Text>
+            <Text style={[s.subtitle, { color: c.ink400 }]}>Bolão 2026</Text>
           </View>
 
           {/* ── Basic info card ── */}

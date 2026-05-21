@@ -1,7 +1,7 @@
 ---
 title: Visão Geral do Projeto
 tags: [architecture, overview]
-updated: 2026-04-17
+updated: 2026-05-20
 ---
 
 # Big Bolão 2026 — Visão Geral
@@ -18,9 +18,15 @@ updated: 2026-04-17
 
 ## Plataformas
 
-- iOS (inclui Sign in with Apple)
-- Android (Edge-to-edge, adaptive icon)
-- Web (static, Metro bundler)
+| Plataforma | Status | Identificador |
+|------------|--------|---------------|
+| iOS | **Publicado na App Store** (desde 2026-05-20) | `com.bignotto.bigbolao2026`, iOS 16+ |
+| Android | **Publicado na Google Play Store** (desde 2026-05-20) | `com.bignotto.bigbolao2026` |
+| Web | Static (Metro bundler) | — |
+
+> [!important] Política OTA
+> O app está em produção. Toda alteração em código JS/TS/assets deve ser entregue via **EAS Update (OTA)** — sem novo binário nativo. Um novo `eas build` só é necessário quando há mudanças em módulos nativos, configurações nativas do `app.json`, ou versão do SDK Expo.
+> Ver: [[Architecture/Deploy-Mobile]]
 
 ## Arquitetura em Camadas
 
