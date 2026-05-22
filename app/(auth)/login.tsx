@@ -3,7 +3,7 @@ import { makeRedirectUri } from 'expo-auth-session';
 import * as Crypto from 'expo-crypto';
 import * as WebBrowser from 'expo-web-browser';
 import { useState } from 'react';
-import { Alert, Platform, StyleSheet, Text, View } from 'react-native';
+import { Alert, AppState, Platform, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from 'styled-components/native';
 
@@ -31,6 +31,8 @@ export default function LoginScreen() {
 
   async function handleGoogleSignIn() {
     setGoogleLoading(true);
+    let appStateSubscription: ReturnType<typeof AppState.addEventListener> | null = null;
+
     try {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -43,6 +45,15 @@ export default function LoginScreen() {
       if (error) throw error;
       if (!data.url) throw new Error('No OAuth URL returned');
 
+      // Android 14+: Chrome Custom Tab may not auto-close when the deep link fires
+      // while the app is already in the foreground. Dismiss it explicitly on resume
+      // so openAuthSessionAsync can resolve and we can check the resulting session.
+      appStateSubscription = AppState.addEventListener('change', async (nextState) => {
+        if (nextState === 'active') {
+          await WebBrowser.dismissBrowser();
+        }
+      });
+
       const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
 
       if (result.type === 'success' && result.url) {
@@ -50,7 +61,11 @@ export default function LoginScreen() {
         const code = url.searchParams.get('code');
 
         if (code) {
-          const { error: sessionError } = await supabase.auth.exchangeCodeForSession(result.url);
+          const exchangePromise = supabase.auth.exchangeCodeForSession(result.url);
+          const timeoutPromise = new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('Session exchange timed out — please try again')), 30000)
+          );
+          const { error: sessionError } = await Promise.race([exchangePromise, timeoutPromise]);
           if (sessionError) throw sessionError;
         } else {
           const hashParams = new URLSearchParams(url.hash.replace('#', ''));
@@ -60,10 +75,19 @@ export default function LoginScreen() {
           const { error: sessionError } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
           if (sessionError) throw sessionError;
         }
+      } else {
+        // Android fallback: auth may have succeeded even if the Custom Tab didn't
+        // close cleanly (result.type === 'cancel' or 'dismiss'). Check for an
+        // existing session before treating this as a user cancellation.
+        const { data: existing } = await supabase.auth.getSession();
+        if (!existing.session) {
+          // Genuinely cancelled — no alert needed, loading resets in finally
+        }
       }
     } catch (e: any) {
       Alert.alert('Google Sign In failed', e.message);
     } finally {
+      appStateSubscription?.remove();
       setGoogleLoading(false);
     }
   }
