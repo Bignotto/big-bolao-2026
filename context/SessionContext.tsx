@@ -125,11 +125,19 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
     if (loading) return;
 
     const inAuthGroup = segments[0] === '(auth)';
+    const atCompleteProfile = (segments as string[])[1] === 'complete-profile';
 
     if (!session && !inAuthGroup) {
       router.replace('/(auth)/login');
-    } else if (session && inAuthGroup) {
-      router.replace('/(tabs)');
+    } else if (session && inAuthGroup && !atCompleteProfile) {
+      const meta = session.user.user_metadata ?? {};
+      const fullName = ((meta.full_name ?? meta.name) as string | undefined)?.trim() ?? '';
+      if (!fullName) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        router.replace('/(auth)/complete-profile' as any);
+      } else {
+        router.replace('/(tabs)');
+      }
     }
   }, [session, loading, segments]);
 

@@ -1,19 +1,33 @@
 import * as AppleAuthentication from 'expo-apple-authentication';
 import { makeRedirectUri } from 'expo-auth-session';
+import Constants from 'expo-constants';
+import { useRouter } from 'expo-router';
 import * as Crypto from 'expo-crypto';
 import * as WebBrowser from 'expo-web-browser';
 import { useState } from 'react';
-import { Alert, AppState, Platform, StyleSheet, Text, View } from 'react-native';
+import { Alert, AppState, Linking, Platform, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from 'styled-components/native';
 
 import AppButton from '@/components/AppComponents/AppButton';
-import { supabase } from '@/lib/supabase';
 import { TypographyFamilies } from '@/constants/tokens';
+import { supabase } from '@/lib/supabase';
 
 WebBrowser.maybeCompleteAuthSession();
 
 const redirectTo = makeRedirectUri({ scheme: 'bigbolao2026', path: 'auth/callback' });
+const appVersion = Constants.expoConfig?.version ?? '—';
+
+// expo-updates native module is absent in Expo Go — require lazily so dev builds don't crash
+let otaLabel: string | null = null;
+try {
+  const Updates = require('expo-updates');
+  if (!Updates.isEmbedded && Updates.createdAt) {
+    otaLabel = (Updates.createdAt as Date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  }
+} catch {
+  // Expo Go / simulator — no OTA runtime available
+}
 
 async function createNonce(): Promise<{ raw: string; hashed: string }> {
   const raw = Array.from(Crypto.getRandomBytes(16))
@@ -26,12 +40,17 @@ async function createNonce(): Promise<{ raw: string; hashed: string }> {
 export default function LoginScreen() {
   const theme = useTheme();
   const c = theme.colors;
+  const router = useRouter();
   const [googleLoading, setGoogleLoading] = useState(false);
   const [appleLoading, setAppleLoading] = useState(false);
 
   async function handleGoogleSignIn() {
     setGoogleLoading(true);
+
+    let linkingSubscription: ReturnType<typeof Linking.addEventListener> | null = null;
     let appStateSubscription: ReturnType<typeof AppState.addEventListener> | null = null;
+    let resolveAuthUrl: ((url: string) => void) | null = null;
+    let rejectAuthUrl: ((e: Error) => void) | null = null;
 
     try {
       const { data, error } = await supabase.auth.signInWithOAuth({
@@ -45,48 +64,62 @@ export default function LoginScreen() {
       if (error) throw error;
       if (!data.url) throw new Error('No OAuth URL returned');
 
-      // Android 14+: Chrome Custom Tab may not auto-close when the deep link fires
-      // while the app is already in the foreground. Dismiss it explicitly on resume
-      // so openAuthSessionAsync can resolve and we can check the resulting session.
-      appStateSubscription = AppState.addEventListener('change', async (nextState) => {
+      // On Android with newer Chrome, the Custom Tab may not auto-close after the
+      // OAuth redirect, so openAuthSessionAsync never resolves as 'success'.
+      // Android still delivers the redirect intent to the app via Linking — we
+      // capture it here instead of depending on openAuthSessionAsync's return value.
+      const authUrlPromise = new Promise<string>((resolve, reject) => {
+        resolveAuthUrl = resolve;
+        rejectAuthUrl = reject;
+        linkingSubscription = Linking.addEventListener('url', ({ url }) => {
+          if (url.startsWith(redirectTo.split('?')[0])) {
+            resolve(url);
+          }
+        });
+      });
+
+      // When the user returns to the app (auth done or cancelled), dismiss the
+      // Custom Tab. Give Linking 400 ms to fire first — if it hasn't, treat as cancel.
+      appStateSubscription = AppState.addEventListener('change', (nextState) => {
         if (nextState === 'active') {
-          await WebBrowser.dismissBrowser();
+          setTimeout(async () => {
+            await WebBrowser.dismissBrowser();
+            rejectAuthUrl?.(new Error('Login cancelado pelo usuário'));
+          }, 400);
         }
       });
 
-      const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+      // Fire the browser without awaiting — the URL arrives via Linking above.
+      WebBrowser.openAuthSessionAsync(data.url, redirectTo).catch(() => {});
 
-      if (result.type === 'success' && result.url) {
-        const url = new URL(result.url);
-        const code = url.searchParams.get('code');
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Login expirou — tente novamente')), 120_000),
+      );
 
-        if (code) {
-          const exchangePromise = supabase.auth.exchangeCodeForSession(result.url);
-          const timeoutPromise = new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error('Session exchange timed out — please try again')), 30000)
-          );
-          const { error: sessionError } = await Promise.race([exchangePromise, timeoutPromise]);
-          if (sessionError) throw sessionError;
-        } else {
-          const hashParams = new URLSearchParams(url.hash.replace('#', ''));
-          const accessToken = hashParams.get('access_token');
-          const refreshToken = hashParams.get('refresh_token') ?? '';
-          if (!accessToken) throw new Error('No tokens in callback URL');
-          const { error: sessionError } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
-          if (sessionError) throw sessionError;
-        }
+      const authUrl = await Promise.race([authUrlPromise, timeoutPromise]);
+
+      const url = new URL(authUrl);
+      const code = url.searchParams.get('code');
+
+      if (code) {
+        const { error: sessionError } =
+          await supabase.auth.exchangeCodeForSession(authUrl);
+        if (sessionError) throw sessionError;
       } else {
-        // Android fallback: auth may have succeeded even if the Custom Tab didn't
-        // close cleanly (result.type === 'cancel' or 'dismiss'). Check for an
-        // existing session before treating this as a user cancellation.
-        const { data: existing } = await supabase.auth.getSession();
-        if (!existing.session) {
-          // Genuinely cancelled — no alert needed, loading resets in finally
-        }
+        const hashParams = new URLSearchParams(url.hash.replace('#', ''));
+        const accessToken = hashParams.get('access_token');
+        const refreshToken = hashParams.get('refresh_token') ?? '';
+        if (!accessToken) throw new Error('No tokens in callback URL');
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+        if (sessionError) throw sessionError;
       }
     } catch (e: any) {
-      Alert.alert('Google Sign In failed', e.message);
+      Alert.alert('Google Sign In failed', e.message ?? String(e));
     } finally {
+      linkingSubscription?.remove();
       appStateSubscription?.remove();
       setGoogleLoading(false);
     }
@@ -132,12 +165,18 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={[s.root, { backgroundColor: c.ink950 }]} edges={['top']}>
-
       {/* ── Hero ── */}
       <View style={s.hero}>
-
         {/* Tournament badge */}
-        <View style={[s.badge, { borderColor: 'rgba(200,255,62,0.22)', backgroundColor: 'rgba(200,255,62,0.06)' }]}>
+        <View
+          style={[
+            s.badge,
+            {
+              borderColor: 'rgba(200,255,62,0.22)',
+              backgroundColor: 'rgba(200,255,62,0.06)',
+            },
+          ]}
+        >
           <Text style={s.badgeEmoji}>⚽</Text>
           <Text style={[s.badgeTxt, { color: c.pitch }]}>BOLÃO 2026</Text>
         </View>
@@ -158,7 +197,6 @@ export default function LoginScreen() {
 
       {/* ── Auth card ── */}
       <View style={[s.card, { backgroundColor: c.ink900, borderTopColor: c.ink800 }]}>
-
         <Text style={[s.cardLabel, { color: c.ink500 }]}>ACESSE SUA CONTA</Text>
 
         <View style={s.gap16} />
@@ -192,11 +230,28 @@ export default function LoginScreen() {
           </View>
         )}
 
+        {/* Email OTP fallback */}
+        <View style={s.dividerRow}>
+          <View style={[s.dividerLine, { backgroundColor: c.ink800 }]} />
+          <Text style={[s.dividerTxt, { color: c.ink600 }]}>ou</Text>
+          <View style={[s.dividerLine, { backgroundColor: c.ink800 }]} />
+        </View>
+
+        <AppButton
+          title="Entrar com e-mail"
+          variant="ghost"
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          onPress={() => router.push('/(auth)/email-otp' as any)}
+        />
+
         <Text style={[s.legal, { color: c.ink600 }]}>
           Ao entrar você concorda com os Termos de Uso e Política de Privacidade.
         </Text>
-      </View>
 
+        <Text style={[s.version, { color: c.ink300 }]}>
+          v{appVersion}{otaLabel ? ` · ${otaLabel}` : ''}
+        </Text>
+      </View>
     </SafeAreaView>
   );
 }
@@ -279,7 +334,36 @@ const s = StyleSheet.create({
     includeFontPadding: false,
   },
 
+  version: {
+    fontFamily: TypographyFamilies.mono,
+    fontSize: 10,
+    letterSpacing: 0.8,
+    textAlign: 'center',
+    marginTop: 8,
+    includeFontPadding: false,
+    opacity: 0.75,
+  },
+
   // Spacing
   gap12: { marginTop: 12 },
   gap16: { height: 16 },
+
+  // Email divider
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 20,
+    marginBottom: 8,
+  },
+  dividerLine: {
+    flex: 1,
+    height: StyleSheet.hairlineWidth,
+  },
+  dividerTxt: {
+    fontFamily: TypographyFamilies.mono,
+    fontSize: 10,
+    letterSpacing: 1.2,
+    includeFontPadding: false,
+    marginHorizontal: 12,
+  },
 });
