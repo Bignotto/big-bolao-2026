@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from 'styled-components/native';
 
 import { useMatchPoolPredictions, type PoolPredictionItem } from '@/hooks/useMatchPoolPredictions';
+import { computeSwing } from '@/lib/scoring';
 import { TypographyFamilies } from '@/constants/tokens';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -72,10 +73,13 @@ type PoolCardProps = {
   matchLocked: boolean;
   matchCompleted: boolean;
   matchIsLive: boolean;
+  liveHomeScore: number;
+  liveAwayScore: number;
+  matchStage: string;
   onPress: (item: PoolPredictionItem) => void;
 };
 
-function PoolCard({ item, matchLocked, matchCompleted, matchIsLive, onPress }: PoolCardProps) {
+function PoolCard({ item, matchLocked, matchCompleted, matchIsLive, liveHomeScore, liveAwayScore, matchStage, onPress }: PoolCardProps) {
   const theme = useTheme();
   const hasPred = item.prediction !== null;
 
@@ -118,7 +122,15 @@ function PoolCard({ item, matchLocked, matchCompleted, matchIsLive, onPress }: P
                 {matchIsLive ? 'PARCIAL' : 'PONTOS'}
               </Text>
               <Text style={[s.resultScore, { color: theme.colors.pitch }]}>
-                +{item.prediction!.pointsEarned ?? 0}
+                +{matchIsLive
+                  ? computeSwing(
+                      item.prediction!.predictedHomeScore,
+                      item.prediction!.predictedAwayScore,
+                      liveHomeScore,
+                      liveAwayScore,
+                      matchStage,
+                    )
+                  : (item.prediction!.pointsEarned ?? 0)}
               </Text>
             </View>
           ) : (
@@ -294,6 +306,9 @@ export default function MatchHubScreen() {
               matchLocked={locked}
               matchCompleted={completed}
               matchIsLive={isLive}
+              liveHomeScore={match?.homeTeamScore ?? 0}
+              liveAwayScore={match?.awayTeamScore ?? 0}
+              matchStage={match?.stage ?? 'GROUP'}
               onPress={handlePoolPress}
             />
           ))

@@ -66,6 +66,13 @@ export default function CreatePoolScreen() {
       maxParticipants: maxPart,
     });
     if (success) {
+      setName('');
+      setDescription('');
+      setIsPrivate(false);
+      setInviteCode('');
+      setMaxParticipants('');
+      setNameError('');
+      setInviteCodeError('');
       Alert.alert('Grupo criado!', 'Seu grupo foi criado com sucesso.', [
         { text: 'OK', onPress: () => router.back() },
       ]);
