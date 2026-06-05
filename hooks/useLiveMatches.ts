@@ -7,6 +7,7 @@ import { matchKeys } from './matchKeys';
 import { TOURNAMENT_ID } from '@/constants/tournament';
 import { fetchMyMatchPredictions } from '@/data/api/matches';
 import { mapMatch } from '@/data/mappers/matchMapper';
+import { computeSwing } from '@/lib/scoring';
 import type { MatchDTO } from '@/data/dto/MatchDTO';
 import type { Match } from '@/domain/entities/Match';
 
@@ -14,46 +15,14 @@ import type { Match } from '@/domain/entities/Match';
 
 export type LiveMatchEntry = {
   match: Match;
-  poolId: number;
-  poolName: string;
+  poolId: number | null;
+  poolName: string | null;
   participantsCount: number | null;
   userRank: number | null;
-  predictedHomeScore: number;
-  predictedAwayScore: number;
-  currentPointsSwing: number;
+  predictedHomeScore: number | null;
+  predictedAwayScore: number | null;
+  currentPointsSwing: number | null;
 };
-
-// ── Scoring ───────────────────────────────────────────────────────────────────
-
-function computeSwing(
-  predHome: number,
-  predAway: number,
-  liveHome: number,
-  liveAway: number,
-  stage: string,
-): number {
-  const predWinner =
-    predHome > predAway ? 'home' : predHome < predAway ? 'away' : 'draw';
-  const liveWinner =
-    liveHome > liveAway ? 'home' : liveHome < liveAway ? 'away' : 'draw';
-
-  let base = 0;
-  if (predHome === liveHome && predAway === liveAway) {
-    base = 5;
-  } else if (
-    predWinner === liveWinner &&
-    predHome - predAway === liveHome - liveAway
-  ) {
-    base = 3;
-  } else if (predWinner === liveWinner) {
-    base = 2;
-  }
-
-  const mult =
-    stage === 'FINAL' ? 2.0 : stage === 'GROUP' ? 1.0 : 1.5;
-
-  return Math.round(base * mult * 10) / 10;
-}
 
 // ── Hook ──────────────────────────────────────────────────────────────────────
 
@@ -97,16 +66,25 @@ export function useLiveMatches() {
   });
 
   const liveMatchesWithMyPredictions = useMemo<LiveMatchEntry[]>(() => {
-    return liveMatches.flatMap((match, i) => {
-      const preds = predQueries[i]?.data;
-      if (!preds || preds.length === 0) return [];
-
+    return liveMatches.map((match, i) => {
+      const preds = predQueries[i]?.data ?? [];
       const liveHome = match.homeTeamScore ?? 0;
       const liveAway = match.awayTeamScore ?? 0;
 
-      // Only pools where the user has actually submitted a prediction
       const withPred = preds.filter((p) => p.prediction !== null);
-      if (withPred.length === 0) return [];
+
+      if (withPred.length === 0) {
+        return {
+          match,
+          poolId: null,
+          poolName: null,
+          participantsCount: null,
+          userRank: null,
+          predictedHomeScore: null,
+          predictedAwayScore: null,
+          currentPointsSwing: null,
+        };
+      }
 
       // Pick the pool where the user is currently scoring highest
       const best = withPred.reduce((acc, p) => {
@@ -127,24 +105,22 @@ export function useLiveMatches() {
         return swing >= accSwing ? p : acc;
       });
 
-      return [
-        {
-          match,
-          poolId: best.poolId,
-          poolName: best.poolName,
-          participantsCount: null, // not available from predictions endpoint
-          userRank: best.userRank,
-          predictedHomeScore: best.prediction!.predictedHomeScore,
-          predictedAwayScore: best.prediction!.predictedAwayScore,
-          currentPointsSwing: computeSwing(
-            best.prediction!.predictedHomeScore,
-            best.prediction!.predictedAwayScore,
-            liveHome,
-            liveAway,
-            match.stage,
-          ),
-        },
-      ];
+      return {
+        match,
+        poolId: best.poolId,
+        poolName: best.poolName,
+        participantsCount: null,
+        userRank: best.userRank,
+        predictedHomeScore: best.prediction!.predictedHomeScore,
+        predictedAwayScore: best.prediction!.predictedAwayScore,
+        currentPointsSwing: computeSwing(
+          best.prediction!.predictedHomeScore,
+          best.prediction!.predictedAwayScore,
+          liveHome,
+          liveAway,
+          match.stage,
+        ),
+      };
     });
   }, [liveMatches, predQueries]);
 

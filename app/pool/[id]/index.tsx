@@ -51,6 +51,7 @@ import MatchFilterControls, {
   type MatchFilterMode,
 } from '@/components/matches/MatchFilterControls';
 import { TypographyFamilies } from '@/constants/tokens';
+import { computeSwing } from '@/lib/scoring';
 import RankingShareCard from '@/components/AppComponents/RankingShareCard';
 import { useShareRanking } from '@/hooks/useShareRanking';
 import { useTournament } from '@/hooks/useTournament';
@@ -200,7 +201,17 @@ function PredictionMatchPanel({
         }).length;
         const pts = ms.reduce((sum, m) => {
           const pred = predictionMap.get(m.id);
-          return sum + (pred?.pointsEarned ?? 0);
+          if (!pred) return sum;
+          if (m.matchStatus === MatchStatus.IN_PROGRESS) {
+            return sum + computeSwing(
+              pred.predictedHomeScore,
+              pred.predictedAwayScore,
+              m.homeTeamScore ?? 0,
+              m.awayTeamScore ?? 0,
+              m.stage,
+            );
+          }
+          return sum + (pred.pointsEarned ?? 0);
         }, 0);
         const allScheduled = ms.every(
           (m) =>
@@ -360,6 +371,29 @@ function GroupInfoTab({
         />
       }
     >
+      {/* ── Pool type info ── */}
+      <View style={[sg.card, { backgroundColor: c.ink850 }]}>
+        <View style={sg.typeRow}>
+          <Ionicons
+            name={pool.isPrivate ? 'lock-closed-outline' : 'globe-outline'}
+            size={18}
+            color={pool.isPrivate ? c.pitch : c.ink300}
+          />
+          <View style={{ flex: 1 }}>
+            <Text style={[sg.typeLabel, { color: c.ink100 }]}>
+              {pool.isPrivate ? 'Grupo Privado' : 'Grupo Público'}
+            </Text>
+            <Text style={[sg.typeHint, { color: c.ink500 }]}>
+              {pool.isPrivate
+                ? 'Apenas membros convidados podem entrar neste grupo.'
+                : 'Qualquer pessoa pode encontrar e entrar neste grupo.'}
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      <View style={sg.gap20} />
+
       {/* ── Invite code ── */}
       <Text style={[sg.sectionLabel, { color: c.ink400 }]}>CÓDIGO DO GRUPO</Text>
       <View style={sg.gap8} />
@@ -503,6 +537,9 @@ const sg = StyleSheet.create({
   memberInfo: { flex: 1, gap: 2 },
   memberName: { fontFamily: TypographyFamilies.sansSemi, fontSize: 14 },
   memberBadge: { fontFamily: TypographyFamilies.sansMedium, fontSize: 11 },
+  typeRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
+  typeLabel: { fontFamily: TypographyFamilies.sansSemi, fontSize: 14, marginBottom: 2 },
+  typeHint: { fontFamily: TypographyFamilies.sans, fontSize: 13, lineHeight: 18 },
 });
 
 // ─── Main screen ──────────────────────────────────────────────────────────────

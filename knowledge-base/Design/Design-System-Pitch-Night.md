@@ -1,7 +1,7 @@
 ---
 title: Design System — Pitch Night
 tags: [design, tokens, theme, typography, components]
-updated: 2026-04-26
+updated: 2026-05-27
 ---
 
 # Design System — Pitch Night
@@ -29,17 +29,17 @@ All tokens live in `constants/theme.ts`.
 
 | Token | Hex | Role |
 |---|---|---|
-| `ink950` | `#0A0D10` | App background |
-| `ink900` | `#0F1317` | Deep surface (shape_dark) |
-| `ink850` | `#151A1F` | Card / sheet surface (shape) |
-| `ink800` | `#1C2228` | Elevated card, secondary button bg |
-| `ink700` | `#262E36` | Borders, dividers |
-| `ink600` | `#3A434D` | Disabled borders |
-| `ink500` | `#5B6670` | Placeholder text |
-| `ink400` | `#8A949E` | Secondary text, icons |
-| `ink300` | `#B8C1CA` | Ghost button label, captions |
-| `ink100` | `#EAEEF2` | Primary text, headings |
-| `ink50`  | `#F7F9FB` | High-contrast labels (rare) |
+| `ink950` | `#0D0D0D` | App background |
+| `ink900` | `#141414` | Deep surface (shape_dark) |
+| `ink850` | `#1C1C1C` | Card / sheet surface (shape) |
+| `ink800` | `#242424` | Elevated card, secondary button bg |
+| `ink700` | `#303030` | Borders, dividers |
+| `ink600` | `#404040` | Disabled borders |
+| `ink500` | `#5E5E5E` | Placeholder text |
+| `ink400` | `#8C8C8C` | Secondary text, icons |
+| `ink300` | `#BEBEBE` | Ghost button label, captions |
+| `ink100` | `#EAEAEA` | Primary text, headings |
+| `ink50`  | `#F7F7F7` | High-contrast labels (rare) |
 
 ### Pitch Accent
 
@@ -67,9 +67,10 @@ These still exist but now point at Pitch Night values:
 | Alias | Resolves to |
 |---|---|
 | `primary` | `#C8FF3E` (= `pitch`) |
-| `background` | `#0A0D10` (= `ink950`) |
-| `text` | `#EAEEF2` (= `ink100`) |
-| `shape` | `#151A1F` (= `ink850`) |
+| `background` | `#0D0D0D` (= `ink950`) |
+| `text` | `#EAEAEA` (= `ink100`) |
+| `shape` | `#1C1C1C` (= `ink850`) |
+| `shape_dark` | `#141414` (= `ink900`) |
 | `positive` | `#4ADE80` (= `signalWin`) |
 | `negative` | `#F04A50` (= `signalLose`) |
 | `attention` | `#FFB020` (= `signalAmber`) |
@@ -110,7 +111,11 @@ Still loaded and used by `AppText`:
 
 ---
 
-## Border Radius (`theme.radii`)
+## Border Radius
+
+Two separate systems exist — use the one that matches your import context.
+
+### `theme.radii` (via `styled-components` theme, used in AppComponents)
 
 | Key | Value | Use |
 |---|---|---|
@@ -119,6 +124,18 @@ Still loaded and used by `AppText`:
 | `md` | 18px | Standard cards |
 | `lg` | 24px | Large sheets, bottom panels |
 | `xl` | 32px | Full-bleed hero cards |
+
+### `BorderRadius` from `constants/tokens.ts` (used in StyleSheet screens)
+
+| Key | Value |
+|---|---|
+| `xlg` | 20px |
+| `lg` | 16px |
+| `md` | 12px |
+| `sm` | 8px |
+| `xsm` | 4px |
+
+> Prefer `theme.radii` for styled-components components. Use `tokens.BorderRadius` in screens that use `StyleSheet.create`.
 
 ---
 

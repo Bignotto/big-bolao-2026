@@ -32,10 +32,9 @@ function liveStatusLabel(matchStatus: MatchStatus): string {
 }
 
 // Predicted winner name for footer label
-function predictedWinner(
-  entry: LiveMatchEntry,
-): string {
+function predictedWinner(entry: LiveMatchEntry): string {
   const { predictedHomeScore, predictedAwayScore, match } = entry;
+  if (predictedHomeScore === null || predictedAwayScore === null) return '';
   if (predictedHomeScore > predictedAwayScore) return match.homeTeam.name;
   if (predictedAwayScore > predictedHomeScore) return match.awayTeam.name;
   return 'Empate';
@@ -89,9 +88,10 @@ export default function LiveMatchCard({ entry, onPress }: Props) {
   const awayWinning = awayScore > homeScore;
   const isDraw = homeScore === awayScore;
 
+  const hasPrediction = entry.predictedHomeScore !== null;
   const winner = predictedWinner(entry);
   const isDrewPred = entry.predictedHomeScore === entry.predictedAwayScore;
-  const hasPoints = entry.currentPointsSwing > 0;
+  const hasPoints = (entry.currentPointsSwing ?? 0) > 0;
 
   return (
     <Pressable
@@ -167,43 +167,56 @@ export default function LiveMatchCard({ entry, onPress }: Props) {
 
       {/* ── Footer ── */}
       <View style={[s.footer, { borderTopColor: 'rgba(255,255,255,0.07)' }]}>
-        {/* Pitch checkmark circle */}
-        <View style={[s.checkCircle, { backgroundColor: theme.colors.pitch }]}>
-          <Ionicons name="checkmark" size={16} color={theme.colors.ink950} />
-        </View>
+        {hasPrediction ? (
+          <>
+            <View style={[s.checkCircle, { backgroundColor: theme.colors.pitch }]}>
+              <Ionicons name="checkmark" size={16} color={theme.colors.ink950} />
+            </View>
 
-        <View style={s.footerText}>
-          {/* Prediction line */}
-          <Text style={[s.predLine, { color: theme.colors.ink100 }]}>
-            {'Seu palpite: '}
-            <Text style={s.predScore}>
-              {entry.predictedHomeScore}–{entry.predictedAwayScore}
-            </Text>
-            {!isDrewPred && (
-              <Text style={[s.predWinner, { color: theme.colors.pitch }]}>
-                {' '}{winner}
-              </Text>
-            )}
-          </Text>
-
-          {/* Subtitle */}
-          <Text style={[s.subtitle, { color: theme.colors.ink400 }]}>
-            {hasPoints ? (
-              <>
-                {'Você está ganhando '}
-                <Text style={[s.subtitlePitch, { color: theme.colors.pitch }]}>
-                  +{entry.currentPointsSwing} pts
+            <View style={s.footerText}>
+              <Text style={[s.predLine, { color: theme.colors.ink100 }]}>
+                {'Seu palpite: '}
+                <Text style={s.predScore}>
+                  {entry.predictedHomeScore}–{entry.predictedAwayScore}
                 </Text>
-                {' · '}{entry.poolName}
-              </>
-            ) : (
-              <>
-                {'Sem pontos agora · '}
-                {entry.poolName}
-              </>
-            )}
-          </Text>
-        </View>
+                {!isDrewPred && (
+                  <Text style={[s.predWinner, { color: theme.colors.pitch }]}>
+                    {' '}{winner}
+                  </Text>
+                )}
+              </Text>
+
+              <Text style={[s.subtitle, { color: theme.colors.ink400 }]}>
+                {hasPoints ? (
+                  <>
+                    {'Você está ganhando '}
+                    <Text style={[s.subtitlePitch, { color: theme.colors.pitch }]}>
+                      +{entry.currentPointsSwing} pts
+                    </Text>
+                    {' · '}{entry.poolName}
+                  </>
+                ) : (
+                  <>
+                    {'Sem pontos agora · '}
+                    {entry.poolName}
+                  </>
+                )}
+              </Text>
+            </View>
+          </>
+        ) : (
+          <>
+            <View style={[s.checkCircle, { backgroundColor: theme.colors.ink700 }]}>
+              <Ionicons name="alert-outline" size={16} color={theme.colors.ink400} />
+            </View>
+
+            <View style={s.footerText}>
+              <Text style={[s.predLine, { color: theme.colors.ink400 }]}>
+                Sem palpite para esta partida
+              </Text>
+            </View>
+          </>
+        )}
       </View>
     </Pressable>
   );

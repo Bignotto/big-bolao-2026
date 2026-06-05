@@ -14,6 +14,7 @@ import { TypographyFamilies } from '@/constants/tokens';
 import type { Match, Team } from '@/domain/entities/Match';
 import type { Prediction } from '@/domain/entities/Prediction';
 import { MatchStatus } from '@/domain/enums/MatchStatus';
+import { computeSwing } from '@/lib/scoring';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -255,10 +256,18 @@ export default function MatchCard({ match, poolContext, showBorder = true }: Mat
 
     // Match live, prediction exists
     if (isLive && pred) {
+      const swing = computeSwing(
+        pred.predictedHomeScore,
+        pred.predictedAwayScore,
+        homeTeamScore ?? 0,
+        awayTeamScore ?? 0,
+        match.stage,
+      );
       return (
         <PredictionChip
           label="AO VIVO"
           score={predScore}
+          pts={swing > 0 ? `+${swing} pts` : '0 pts'}
           bg="rgba(255,176,32,0.10)"
           borderColor="rgba(255,176,32,0.30)"
           textColor={theme.colors.signalAmber}
@@ -286,8 +295,17 @@ export default function MatchCard({ match, poolContext, showBorder = true }: Mat
         hasScore &&
         pred.predictedHomeScore === homeTeamScore &&
         pred.predictedAwayScore === awayTeamScore;
-      const isWinner = !isExact && pred.pointsEarned != null && pred.pointsEarned > 0;
-      const pts = pred.pointsEarned ?? 0;
+      const predWinner =
+        pred.predictedHomeScore > pred.predictedAwayScore ? 'home'
+        : pred.predictedHomeScore < pred.predictedAwayScore ? 'away' : 'draw';
+      const actualWinner = hasScore
+        ? (homeTeamScore! > awayTeamScore! ? 'home' : homeTeamScore! < awayTeamScore! ? 'away' : 'draw')
+        : null;
+      const isWinner = !isExact && actualWinner !== null && predWinner === actualWinner;
+      const pts = pred.pointsEarned ?? (hasScore ? computeSwing(
+        pred.predictedHomeScore, pred.predictedAwayScore,
+        homeTeamScore!, awayTeamScore!, match.stage,
+      ) : 0);
       const ptsLabel = pts > 0 ? `+${pts} pts` : '0 pts';
 
       if (isExact) {

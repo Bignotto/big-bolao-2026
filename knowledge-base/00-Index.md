@@ -119,7 +119,8 @@ updated: 2026-05-20
 
 ## 🎨 Design System
 
-- [[Design/Design-System-Pitch-Night]] — Pitch Night theme: tokens, typography, color scale, layout rules, AppButton redesign
+- [[Design/Design-Tokens]] — Source-of-truth token reference: all colors, fonts, spacing, radii (derived from actual code)
+- [[Design/Design-System-Pitch-Night]] — Pitch Night theme: design rationale, usage rules, layout rules, AppButton redesign
 
 ---
 

@@ -32,7 +32,7 @@ export default function FindPoolScreen() {
   const [mode, setMode] = useState<SearchMode>('byName');
   const [nameQuery, setNameQuery] = useState('');
   const [codeQuery, setCodeQuery] = useState('');
-  const [joiningId, setJoiningId] = useState<number | null>(null);
+  const [showHelp, setShowHelp] = useState(false);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -45,7 +45,6 @@ export default function FindPoolScreen() {
     clearPreview,
     joining,
     joinError,
-    joinById,
     joinByCode,
     clearJoinError,
   } = useJoinPool();
@@ -71,16 +70,8 @@ export default function FindPoolScreen() {
     }
   }, [joinError]);
 
-  async function handleJoinById(pool: Pool) {
-    setJoiningId(pool.id);
-    const success = await joinById(pool.id);
-    setJoiningId(null);
-    if (success) {
-      Alert.alert('Grupo', `Você entrou em "${pool.name}"!`, [
-        { text: 'Ver grupo', onPress: () => router.push(`/pool/${pool.id}`) },
-        { text: 'Continuar buscando' },
-      ]);
-    }
+  function handleJoinById(pool: Pool) {
+    router.push(`/pool/${pool.id}/join`);
   }
 
   async function handleJoinByCode() {
@@ -107,7 +98,6 @@ export default function FindPoolScreen() {
   // ── Pool card (byName mode) ──────────────────────────────────────────────────
 
   function renderPoolItem({ item }: { item: Pool }) {
-    const isJoining = joiningId === item.id;
     const alreadyIn = item.isParticipant;
     const full = isFull(item);
 
@@ -120,9 +110,16 @@ export default function FindPoolScreen() {
           <Text style={[s.cardTitle, { color: c.ink100 }]} numberOfLines={1}>
             {item.name}
           </Text>
-          {item.isPrivate && (
-            <Ionicons name="lock-closed-outline" size={14} color={c.ink400} style={{ marginLeft: 6 }} />
-          )}
+          <View style={[s.privacyBadge, { backgroundColor: c.ink800 }]}>
+            <Ionicons
+              name={item.isPrivate ? 'lock-closed-outline' : 'globe-outline'}
+              size={11}
+              color={item.isPrivate ? c.pitch : c.ink500}
+            />
+            <Text style={[s.privacyBadgeText, { color: item.isPrivate ? c.pitch : c.ink500 }]}>
+              {item.isPrivate ? 'Privado' : 'Público'}
+            </Text>
+          </View>
         </View>
 
         {!!item.description && (
@@ -150,10 +147,9 @@ export default function FindPoolScreen() {
             </View>
           ) : (
             <AppButton
-              title="Entrar"
+              title="Ver e Entrar"
               variant="primary"
               size="sm"
-              isLoading={isJoining}
               onPress={() => handleJoinById(item)}
             />
           )}
@@ -188,23 +184,50 @@ export default function FindPoolScreen() {
           <Text style={[s.subtitle, { color: c.ink400 }]}>Bolão 2026</Text>
         </View>
 
-        {/* Segmented control */}
-        <View style={[s.segmentTrack, { backgroundColor: c.ink850 }]}>
-          {(['byName', 'byCode'] as SearchMode[]).map((m) => {
-            const active = mode === m;
-            return (
-              <Pressable
-                key={m}
-                style={[s.segmentTab, active && { backgroundColor: c.pitch }]}
-                onPress={() => handleSwitchMode(m)}
-              >
-                <Text style={[s.segmentText, { color: active ? c.pitchInk : c.ink400 }]}>
-                  {m === 'byName' ? 'Por nome' : 'Por código'}
-                </Text>
-              </Pressable>
-            );
-          })}
+        {/* Segmented control + help button */}
+        <View style={s.segmentRow}>
+          <View style={[s.segmentTrack, { backgroundColor: c.ink850 }]}>
+            {(['byName', 'byCode'] as SearchMode[]).map((m) => {
+              const active = mode === m;
+              return (
+                <Pressable
+                  key={m}
+                  style={[s.segmentTab, active && { backgroundColor: c.pitch }]}
+                  onPress={() => handleSwitchMode(m)}
+                >
+                  <Text style={[s.segmentText, { color: active ? c.pitchInk : c.ink400 }]}>
+                    {m === 'byName' ? 'Por nome' : 'Por código'}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          <Pressable
+            onPress={() => setShowHelp((v) => !v)}
+            style={[s.helpBtn, { backgroundColor: c.ink850 }]}
+            hitSlop={8}
+          >
+            <Ionicons
+              name={showHelp ? 'close-circle-outline' : 'help-circle-outline'}
+              size={20}
+              color={showHelp ? c.pitch : c.ink500}
+            />
+          </Pressable>
         </View>
+
+        {showHelp && (
+          <View style={[s.helpCard, { backgroundColor: c.ink850, borderColor: c.ink700 }]}>
+            <Ionicons name="key-outline" size={16} color={c.pitch} style={{ marginTop: 1 }} />
+            <Text style={[s.helpText, { color: c.ink300 }]}>
+              Se o grupo que você procura é{' '}
+              <Text style={{ color: c.ink100, fontFamily: TypographyFamilies.sansSemi }}>privado</Text>
+              , ou se um amigo te enviou um{' '}
+              <Text style={{ color: c.ink100, fontFamily: TypographyFamilies.sansSemi }}>código de convite</Text>
+              , use a aba{' '}
+              <Text style={{ color: c.pitch, fontFamily: TypographyFamilies.sansSemi }}>Por código</Text>.
+            </Text>
+          </View>
+        )}
 
         {/* ── By Name ── */}
         {mode === 'byName' && (
@@ -329,9 +352,16 @@ export default function FindPoolScreen() {
                   <Text style={[s.cardTitle, { color: c.ink100 }]} numberOfLines={1}>
                     {previewPool.name}
                   </Text>
-                  {previewPool.isPrivate && (
-                    <Ionicons name="lock-closed-outline" size={16} color={c.ink400} style={{ marginLeft: 8 }} />
-                  )}
+                  <View style={[s.privacyBadge, { backgroundColor: c.ink800 }]}>
+                    <Ionicons
+                      name={previewPool.isPrivate ? 'lock-closed-outline' : 'globe-outline'}
+                      size={11}
+                      color={previewPool.isPrivate ? c.pitch : c.ink500}
+                    />
+                    <Text style={[s.privacyBadgeText, { color: previewPool.isPrivate ? c.pitch : c.ink500 }]}>
+                      {previewPool.isPrivate ? 'Privado' : 'Público'}
+                    </Text>
+                  </View>
                 </View>
 
                 {!!previewPool.description && (
@@ -423,14 +453,38 @@ const s = StyleSheet.create({
   createBtnText: { fontFamily: TypographyFamilies.sansSemi, fontSize: 13 },
 
   // Segmented control
-  segmentTrack: {
+  segmentRow: {
     flexDirection: 'row',
-    borderRadius: 12,
-    padding: 4,
-    marginHorizontal: 16,
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
     marginTop: 16,
     marginBottom: 12,
   },
+  segmentTrack: {
+    flex: 1,
+    flexDirection: 'row',
+    borderRadius: 12,
+    padding: 4,
+  },
+  helpBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  helpCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+    marginHorizontal: 16,
+    marginBottom: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 12,
+  },
+  helpText: { flex: 1, fontFamily: TypographyFamilies.sans, fontSize: 13, lineHeight: 19 },
   segmentTab: {
     flex: 1,
     alignItems: 'center',
@@ -506,6 +560,16 @@ const s = StyleSheet.create({
   },
   participantsRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   participantsText: { fontFamily: TypographyFamilies.sansMedium, fontSize: 12 },
+  privacyBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    marginLeft: 8,
+  },
+  privacyBadgeText: { fontFamily: TypographyFamilies.sansSemi, fontSize: 11 },
   alreadyInBadge: {
     borderWidth: 1,
     borderRadius: 8,
