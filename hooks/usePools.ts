@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '@/lib/apiClient';
 import { useSession } from '@/context/SessionContext';
 import { poolKeys } from './poolKeys';
+import type { ScoringRules } from '@/lib/scoring';
 
 export type Pool = {
   id: number;
@@ -18,6 +19,7 @@ export type Pool = {
   participantsCount: number;
   isCreator: boolean;
   isParticipant: boolean;
+  scoringRules?: ScoringRules;
   // Extended fields — populated when API returns standings/prediction data
   isAdmin?: boolean;
   userRank?: number | null;

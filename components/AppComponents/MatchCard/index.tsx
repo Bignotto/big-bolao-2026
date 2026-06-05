@@ -14,13 +14,14 @@ import { TypographyFamilies } from '@/constants/tokens';
 import type { Match, Team } from '@/domain/entities/Match';
 import type { Prediction } from '@/domain/entities/Prediction';
 import { MatchStatus } from '@/domain/enums/MatchStatus';
-import { computeSwing } from '@/lib/scoring';
+import { computeSwing, type ScoringRules } from '@/lib/scoring';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type PoolContext = {
   poolId: string | number;
   userPrediction?: Prediction | null;
+  scoringRules?: ScoringRules | null;
 };
 
 export type MatchCardProps = {
@@ -256,13 +257,16 @@ export default function MatchCard({ match, poolContext, showBorder = true }: Mat
 
     // Match live, prediction exists
     if (isLive && pred) {
-      const swing = computeSwing(
-        pred.predictedHomeScore,
-        pred.predictedAwayScore,
-        homeTeamScore ?? 0,
-        awayTeamScore ?? 0,
-        match.stage,
-      );
+      const swing = poolContext?.scoringRules
+        ? computeSwing(
+            pred.predictedHomeScore,
+            pred.predictedAwayScore,
+            homeTeamScore ?? 0,
+            awayTeamScore ?? 0,
+            match.stage,
+            poolContext.scoringRules,
+          )
+        : 0;
       return (
         <PredictionChip
           label="AO VIVO"
@@ -302,10 +306,13 @@ export default function MatchCard({ match, poolContext, showBorder = true }: Mat
         ? (homeTeamScore! > awayTeamScore! ? 'home' : homeTeamScore! < awayTeamScore! ? 'away' : 'draw')
         : null;
       const isWinner = !isExact && actualWinner !== null && predWinner === actualWinner;
-      const pts = pred.pointsEarned ?? (hasScore ? computeSwing(
-        pred.predictedHomeScore, pred.predictedAwayScore,
-        homeTeamScore!, awayTeamScore!, match.stage,
-      ) : 0);
+      const pts = pred.pointsEarned ?? (hasScore && poolContext?.scoringRules
+        ? computeSwing(
+            pred.predictedHomeScore, pred.predictedAwayScore,
+            homeTeamScore!, awayTeamScore!, match.stage,
+            poolContext.scoringRules,
+          )
+        : 0);
       const ptsLabel = pts > 0 ? `+${pts} pts` : '0 pts';
 
       if (isExact) {

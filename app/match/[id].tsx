@@ -15,7 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from 'styled-components/native';
 
 import { useMatchPoolPredictions, type PoolPredictionItem } from '@/hooks/useMatchPoolPredictions';
-import { computeSwing } from '@/lib/scoring';
+import { computeSwing, DEFAULT_SCORING_RULES } from '@/lib/scoring';
 import { TypographyFamilies } from '@/constants/tokens';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -129,8 +129,16 @@ function PoolCard({ item, matchLocked, matchCompleted, matchIsLive, liveHomeScor
                       liveHomeScore,
                       liveAwayScore,
                       matchStage,
+                      item.scoringRules ?? DEFAULT_SCORING_RULES,
                     )
-                  : (item.prediction!.pointsEarned ?? 0)}
+                  : (item.prediction!.pointsEarned ?? computeSwing(
+                      item.prediction!.predictedHomeScore,
+                      item.prediction!.predictedAwayScore,
+                      liveHomeScore,
+                      liveAwayScore,
+                      matchStage,
+                      item.scoringRules ?? DEFAULT_SCORING_RULES,
+                    ))}
               </Text>
             </View>
           ) : (
