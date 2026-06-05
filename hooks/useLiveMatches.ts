@@ -7,7 +7,7 @@ import { matchKeys } from './matchKeys';
 import { TOURNAMENT_ID } from '@/constants/tournament';
 import { fetchMyMatchPredictions } from '@/data/api/matches';
 import { mapMatch } from '@/data/mappers/matchMapper';
-import { computeSwing } from '@/lib/scoring';
+import { computeSwing, DEFAULT_SCORING_RULES } from '@/lib/scoring';
 import type { MatchDTO } from '@/data/dto/MatchDTO';
 import type { Match } from '@/domain/entities/Match';
 
@@ -94,6 +94,7 @@ export function useLiveMatches() {
           liveHome,
           liveAway,
           match.stage,
+          DEFAULT_SCORING_RULES,
         );
         const accSwing = computeSwing(
           acc.prediction!.predictedHomeScore,
@@ -101,6 +102,7 @@ export function useLiveMatches() {
           liveHome,
           liveAway,
           match.stage,
+          DEFAULT_SCORING_RULES,
         );
         return swing >= accSwing ? p : acc;
       });
@@ -119,6 +121,7 @@ export function useLiveMatches() {
           liveHome,
           liveAway,
           match.stage,
+          DEFAULT_SCORING_RULES,
         ),
       };
     });

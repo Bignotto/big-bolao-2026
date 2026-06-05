@@ -209,21 +209,44 @@ export default function PredictScreen() {
       Alert.alert('Palpites encerrados', 'Este jogo já começou.');
       return;
     }
-    const payload: PredictionPayload = {
-      poolId: poolId!,
-      matchId: matchId!,
-      predictedHomeScore: homeScore,
-      predictedAwayScore: awayScore,
-      predictedHasExtraTime: false,
-      predictedHasPenalties: false,
-      predictedPenaltyHomeScore: null,
-      predictedPenaltyAwayScore: null,
-      predictionId: existingPrediction?.id,
+
+    const doSubmit = () => {
+      const payload: PredictionPayload = {
+        poolId: poolId!,
+        matchId: matchId!,
+        predictedHomeScore: homeScore,
+        predictedAwayScore: awayScore,
+        predictedHasExtraTime: false,
+        predictedHasPenalties: false,
+        predictedPenaltyHomeScore: null,
+        predictedPenaltyAwayScore: null,
+        predictionId: existingPrediction?.id,
+      };
+      mutation.mutate(payload, {
+        onSuccess: () => router.back(),
+        onError: (err) => Alert.alert('Erro', (err as Error).message),
+      });
     };
-    mutation.mutate(payload, {
-      onSuccess: () => router.back(),
-      onError: (err) => Alert.alert('Erro', (err as Error).message),
-    });
+
+    const brazilIsHome = match.homeTeam.countryCode === 'BRA';
+    const brazilIsAway = match.awayTeam.countryCode === 'BRA';
+    const brazilLoses =
+      (brazilIsHome && homeScore < awayScore) ||
+      (brazilIsAway && awayScore < homeScore);
+
+    if (brazilLoses) {
+      Alert.alert(
+        '🇧🇷 Eita...',
+        'Tem certeza? Derrota pro Brasil mesmo?',
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Confirmar', style: 'destructive', onPress: doSubmit },
+        ],
+      );
+      return;
+    }
+
+    doSubmit();
   }
 
   return (

@@ -168,6 +168,7 @@ function PredictionMatchPanel({
   refetch,
   predictionMap,
   poolId,
+  scoringRules,
   mode,
   selectedChip,
   selectedDate,
@@ -180,6 +181,7 @@ function PredictionMatchPanel({
   refetch: () => void;
   predictionMap: Map<number, Prediction>;
   poolId: number;
+  scoringRules: PoolDetail['scoringRules'] | null;
   mode: MatchFilterMode;
   selectedChip: MatchFilterChipValue;
   selectedDate: string | null;
@@ -202,13 +204,14 @@ function PredictionMatchPanel({
         const pts = ms.reduce((sum, m) => {
           const pred = predictionMap.get(m.id);
           if (!pred) return sum;
-          if (m.matchStatus === MatchStatus.IN_PROGRESS) {
+          if (m.matchStatus === MatchStatus.IN_PROGRESS && scoringRules) {
             return sum + computeSwing(
               pred.predictedHomeScore,
               pred.predictedAwayScore,
               m.homeTeamScore ?? 0,
               m.awayTeamScore ?? 0,
               m.stage,
+              scoringRules,
             );
           }
           return sum + (pred.pointsEarned ?? 0);
@@ -297,7 +300,7 @@ function PredictionMatchPanel({
           renderItem={({ item }) => (
             <MatchCard
               match={item}
-              poolContext={{ poolId, userPrediction: predictionMap.get(item.id) }}
+              poolContext={{ poolId, userPrediction: predictionMap.get(item.id), scoringRules }}
             />
           )}
         />
@@ -312,7 +315,7 @@ function PredictionMatchPanel({
           renderItem={({ item }) => (
             <MatchCard
               match={item}
-              poolContext={{ poolId, userPrediction: predictionMap.get(item.id) }}
+              poolContext={{ poolId, userPrediction: predictionMap.get(item.id), scoringRules }}
             />
           )}
         />
@@ -894,6 +897,7 @@ export default function PoolDetailsScreen() {
           refetch={matchesRefetch}
           predictionMap={predictionMap}
           poolId={poolId ?? 0}
+          scoringRules={pool?.scoringRules ?? null}
           mode={predFilterMode}
           selectedChip={predChip}
           selectedDate={predDate}

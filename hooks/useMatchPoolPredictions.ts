@@ -6,6 +6,7 @@ import { useMatch } from './useMatch';
 import { useMyMatchPredictions } from './useMyMatchPredictions';
 import { usePools, type Pool } from './usePools';
 import type { MyMatchPredictionEntry } from '@/domain/entities/MatchPredictionStatus';
+import type { ScoringRules } from '@/lib/scoring';
 
 export type PoolPredictionItem = {
   poolId: number;
@@ -13,6 +14,7 @@ export type PoolPredictionItem = {
   participantsCount: number | null;
   userRank: number | null;
   prediction: MyMatchPredictionEntry['prediction'];
+  scoringRules: ScoringRules | null;
 };
 
 export function useMatchPoolPredictions(matchId: number | undefined) {
@@ -41,6 +43,7 @@ export function useMatchPoolPredictions(matchId: number | undefined) {
       participantsCount: poolsById.get(entry.poolId)?.participantsCount ?? null,
       userRank: entry.userRank,
       prediction: entry.prediction,
+      scoringRules: poolsById.get(entry.poolId)?.scoringRules ?? null,
     }));
   }, [predsQuery.data, poolsById]);
 
