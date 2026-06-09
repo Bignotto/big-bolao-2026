@@ -21,7 +21,7 @@ export function useShareRanking(cardRef: RefObject<View | null>) {
   }
 
   async function saveToGallery(): Promise<boolean> {
-    const { status } = await MediaLibrary.requestPermissionsAsync();
+    const { status } = await MediaLibrary.requestPermissionsAsync(true);
     if (status !== 'granted') return false;
     const uri = await captureRef(cardRef, { format: 'png', quality: 1 });
     await MediaLibrary.saveToLibraryAsync(uri);
