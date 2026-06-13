@@ -2,7 +2,7 @@
   "expo": {
     "name": "Big Bolão 2026",
     "slug": "big-bolao-2026",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "bigbolao2026",
@@ -32,9 +32,7 @@
       "predictiveBackGestureEnabled": false,
       "package": "com.bignotto.bigbolao2026",
       "versionCode": 1,
-      "permissions": [
-        "android.permission.WRITE_EXTERNAL_STORAGE"
-      ]
+      "permissions": ["android.permission.WRITE_EXTERNAL_STORAGE"]
     },
     "web": {
       "bundler": "metro",

@@ -22,6 +22,7 @@ export const GROUP_LETTERS = [
 export type GroupLetter = (typeof GROUP_LETTERS)[number];
 
 export const KNOCKOUT_STAGES = [
+  MatchStage.ROUND_OF_32,
   MatchStage.ROUND_OF_16,
   MatchStage.QUARTER_FINAL,
   MatchStage.SEMI_FINAL,

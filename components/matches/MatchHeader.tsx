@@ -17,6 +17,7 @@ type MatchHeaderProps = {
 
 const STAGE_LABELS: Record<string, string> = {
   [MatchStage.GROUP]: 'FASE DE GRUPOS',
+  [MatchStage.ROUND_OF_32]: 'DEZESSEIS DE FINAL',
   [MatchStage.ROUND_OF_16]: 'OITAVAS DE FINAL',
   [MatchStage.QUARTER_FINAL]: 'QUARTAS DE FINAL',
   [MatchStage.SEMI_FINAL]: 'SEMIFINAL',

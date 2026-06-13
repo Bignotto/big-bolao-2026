@@ -197,11 +197,7 @@ export default function MatchCard({ match, poolContext, showBorder = true }: Mat
     awayNameColor = theme.colors.ink100;
   }
 
-  const timeStr = new Date(matchDatetime).toLocaleTimeString('pt-BR', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
+  const timeStr = matchDatetime.slice(11, 16);
 
   const handlePress = async () => {
     try {
