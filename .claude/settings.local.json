@@ -11,7 +11,9 @@
       "mcp__plugin_context-mode_context-mode__ctx_execute_file",
       "Bash(npx expo *)",
       "mcp__plugin_context-mode_context-mode__ctx_execute",
-      "mcp__plugin_context-mode_context-mode__ctx_fetch_and_index"
+      "mcp__plugin_context-mode_context-mode__ctx_fetch_and_index",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\Thiago\\\\Projects\\\\big-bolao-2026\\\\knowledge-base\" -Recurse | Select-Object FullName, @{Name=\"RelPath\";Expression={$_.FullName.Replace\\(\"C:\\\\Users\\\\Thiago\\\\Projects\\\\big-bolao-2026\\\\\", \"\"\\)}} | Sort-Object RelPath)",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\Thiago\\\\Projects\\\\big-bolao-2026\\\\hooks\" -Recurse | Select-Object FullName, @{Name=\"RelPath\";Expression={$_.FullName.Replace\\(\"C:\\\\Users\\\\Thiago\\\\Projects\\\\big-bolao-2026\\\\\", \"\"\\)}} | Sort-Object RelPath)"
     ]
   }
 }

@@ -1,7 +1,7 @@
 ---
 title: Registry de Hooks
 tags: [hooks, react-query, data-fetching]
-updated: 2026-04-18
+updated: 2026-06-09
 ---
 
 # Registry de Hooks
@@ -165,3 +165,63 @@ await leaveMutation.mutateAsync();
 
 Invalida: `poolKeys.all`
 Ver: [[Screens/Screen-PoolDetail]]
+
+---
+
+## useLiveMatches
+
+**Arquivo:** `hooks/useLiveMatches.ts`
+**Tipo:** Query (polling)
+**Endpoint:** `GET /tournaments/:id/matches?status=IN_PROGRESS` + `GET /matches/:id/predictions/me`
+**Uso:** Partidas em andamento com palpites e pontuação em tempo real
+
+- Polling a cada 30s enquanto a tela estiver em foco (`useFocusEffect`)
+- Retorna `LiveMatchEntry[]` com swing de pontos calculado via `computeSwing`
+- Seleciona o bolão de melhor performance quando o usuário tem palpites em múltiplos bolões
+
+Ver: [[Hooks/useLiveMatches]], [[Hooks/useMyMatchPredictions]]
+
+---
+
+## useMyMatchPredictions
+
+**Arquivo:** `hooks/useMyMatchPredictions.ts`
+**Tipo:** Query
+**Endpoint:** `GET /matches/:matchId/predictions/me`
+**Uso:** Palpites do usuário logado para uma partida, em todos os seus bolões
+
+- Desabilitado enquanto `matchId` for `undefined`
+- `staleTime: 30_000`
+
+Ver: [[Hooks/useMyMatchPredictions]]
+
+---
+
+## useMatchPoolPredictions
+
+**Arquivo:** `hooks/useMatchPoolPredictions.ts`
+**Tipo:** Query (composição)
+**Endpoints:** `useMatch` + `useMyMatchPredictions` + `usePools`
+**Uso:** Agrega dados de partida + palpites + bolões para a tela de detalhe de partida
+
+- Refetch on focus via `useFocusEffect` para refletir edições da tela de palpite
+- Retorna `PoolPredictionItem[]` enriquecido com `scoringRules` e `participantsCount`
+
+Ver: [[Hooks/useMatchPoolPredictions]]
+
+---
+
+## useShareRanking
+
+**Arquivo:** `hooks/useShareRanking.ts`
+**Tipo:** UI utility (sem query/mutation)
+**Uso:** Captura card de ranking como PNG e compartilha via share sheet ou salva na galeria
+
+```ts
+const { shareRanking, saveToGallery, sharing } = useShareRanking(cardRef);
+```
+
+- Requer `react-native-view-shot`, `expo-sharing`, `expo-media-library`
+- `saveToGallery` solicita permissão antes de salvar; retorna `false` se negado
+
+Ver: [[Hooks/useShareRanking]]
