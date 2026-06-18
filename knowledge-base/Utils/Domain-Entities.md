@@ -1,7 +1,7 @@
 ---
 title: Domain Entities
 tags: [domain, entities, typescript]
-updated: 2026-04-17
+updated: 2026-06-14
 ---
 
 # Entidades de Domínio
@@ -23,9 +23,20 @@ domain/entities/Match.ts      ← entidade de domínio tipada
 
 **Arquivo:** `domain/entities/Match.ts`
 
-Entidade de domínio para partidas. Derivada de `MatchDTO` via `matchMapper.ts`.
+Entidade de domínio para partidas.
 
-Campos principais: `id`, `homeTeam`, `awayTeam`, `homeTeamScore`, `awayTeamScore`, `matchStatus`, `matchDatetime`, `round`, `group`, `stadium`, campos de pênalti e tempo extra.
+Campos principais: `id`, `tournamentId`, `homeTeam`, `awayTeam`, `homeTeamScore`, `awayTeamScore`, `matchStatus`, `matchDatetime`, `stage`, `group` (string | null), `stadium` (string | null), `hasExtraTime`, `hasPenalties`, `penaltyHomeScore`, `penaltyAwayScore`, `createdAt`, `updatedAt`.
+
+### `isMatchLocked(match)`
+
+```ts
+export function isMatchLocked(match: Pick<Match, 'matchDatetime'>): boolean
+```
+
+Retorna `true` se o horário de início já passou. Compara como naive string no fuso de São Paulo (`America/Sao_Paulo`) — não usa UTC. Usar para bloquear steppers e formulário de palpite antes de checar `matchStatus`.
+
+> [!warning]
+> `matchDatetime` é armazenado como horário local de São Paulo sem offset. Não compare com `new Date()` direto — use `toLocaleString('sv', { timeZone: 'America/Sao_Paulo' })`.
 
 ## MatchPredictionStatus
 

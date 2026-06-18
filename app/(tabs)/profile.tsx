@@ -22,7 +22,9 @@ import { useUpdateProfile, useLogout, useDeleteAccount } from '@/hooks/useUpdate
 import { useSession } from '@/context/SessionContext';
 import AppAvatar from '@/components/AppComponents/AppAvatar';
 import AppButton from '@/components/AppComponents/AppButton';
+import Constants from 'expo-constants';
 import { TypographyFamilies } from '@/constants/tokens';
+import { OTA_LABEL } from '@/constants/tournament';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -48,7 +50,7 @@ const ACHIEVEMENTS = [
   { id: '3', icon: '🔥', label: 'Sequência 5', unlocked: false },
 ];
 
-const APP_VERSION = '1.0.0';
+const APP_VERSION = Constants.expoConfig?.version ?? '—';
 const MAX_NAME = 40;
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
@@ -324,7 +326,7 @@ export default function ProfileScreen() {
         {/* ── Footer ── */}
         <View style={s.gap28} />
         <Text style={[s.footer, { color: c.ink500 }]}>
-          BIG BOLÃO · V{APP_VERSION}{'   '}BOLÃO 2026
+          BIG BOLÃO · V{APP_VERSION}{OTA_LABEL ? ` · ${OTA_LABEL}` : ''}{'   '}BOLÃO 2026
         </Text>
         <View style={s.gap20} />
       </ScrollView>

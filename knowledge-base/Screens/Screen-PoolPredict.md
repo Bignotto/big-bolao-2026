@@ -1,57 +1,95 @@
 ---
-title: Screen — Pool Predict (Palpites)
+title: Screen — Pool Predict (Palpite de Partida)
 tags: [screen, pool, predictions]
-updated: 2026-04-17
+updated: 2026-06-14
 ---
 
 # Screen — Pool Predict
 
 **Arquivo:** `app/pool/[id]/predict.tsx`
-**Rota:** `/pool/[id]/predict`
+**Rota:** `/pool/[id]/predict?matchId=[matchId]`
 
 ## Propósito
 
-Permite ao usuário fazer ou editar palpites de placar para as partidas do bolão.
+Tela de palpite por partida. Abre como modal a partir da tela de pool detail. O usuário define o placar usando `ScoreStepper` e salva/atualiza o palpite.
 
-## Lógica de UI
+## Parâmetros de rota
+
+| Param | Tipo | Origem |
+|-------|------|--------|
+| `id` | string | poolId |
+| `matchId` | string | matchId |
+
+## Seções da tela
+
+### Top bar
+- Botão de fechar (chevron) → `router.back()`
+- Nome do bolão em eyebrow centralizado
+
+### Eyebrow de partida
+- Stage + grupo/rodada (ex: `GRUPO A · RODADA 1`)
+- Data/hora/estádio
+
+### Steppers
+- `ScoreStepper` para cada time (casa e visitante)
+- Desabilitado quando `isMatchLocked(match) === true`
+
+### Interpretation card (pré-jogo)
+- Mostra o resultado do palpite atual: "Vitória de X · saldo N" ou "Empate"
+- Exibe pontos possíveis baseados em `pool.scoringRules`
+- Oculto quando o jogo está bloqueado
+
+### Result card (pós-jogo)
+- Exibido quando `matchStatus === COMPLETED` e há palpite existente
+- Mostra `homeTeamScore–awayTeamScore`, pontos ganhos e o palpite feito
+
+### "Como pontua" (collapsible)
+- Painel recolhível com a tabela de pontuação do bolão
+- Aberto por padrão; oculto quando jogo já começou
+- Exibe: Placar exato, Vencedor + saldo, Vencedor, Empate
+
+### CTA (sticky)
+- **Desbloqueado:** `AppButton` "Salvar palpite · X–Y →" ou "Atualizar palpite · X–Y →"
+- **Bloqueado:** banner com `Ionicons lock-closed` + horário de bloqueio + palpite salvo
+
+## Lógica de bloqueio
 
 ```
-Para cada partida:
-  ├── matchStatus === 'SCHEDULED'  → ScoreInput habilitado
-  ├── matchStatus === 'IN_PROGRESS' → ScoreInput bloqueado (em andamento)
-  └── matchStatus === 'COMPLETED'  → Exibe resultado + pontos ganhos
+isMatchLocked(match) — compara matchDatetime (horário SP) com now (SP)
+→ true: steppers desabilitados, CTA vira banner, panels ocultos
 ```
 
-## Indicadores de Palpite
+> [!warning]
+> `isMatchLocked` compara como naive string no fuso de São Paulo. Não usar `.getTime()` ou UTC diretamente.
 
-| Estado | Descrição |
-|--------|-----------|
-| Sem palpite | Input vazio, botão salvar |
-| Com palpite | Input preenchido, editável se SCHEDULED |
-| Partida iniciada | Input desabilitado |
-| Partida concluída | Placar real + `pointsEarned` (null até COMPLETED) |
+## Easter egg — Brasil perde
 
-## Componentes Usados
-
-- [[Components/ScoreInput]] — entrada de gols casa/fora
-- [[Components/PoolPredictionMatchCard]] — card de palpite com status
-- [[Components/AppButton]] — salvar palpite
+Se o palpite implica derrota do Brasil, exibe `Alert.alert('🇧🇷 Eita...')` pedindo confirmação antes de salvar.
 
 ## Hooks
 
-- [[Hooks/useUpsertPrediction]] — criar/atualizar palpite
-- [[Hooks/useMyMatchPredictions]] — palpites existentes do usuário
-- [[Hooks/usePoolMatchPredictions]] — partidas do bolão com status
+| Hook | Uso |
+|------|-----|
+| `useMatch(matchId)` | dados da partida |
+| `usePool(poolId)` | nome e `scoringRules` do bolão |
+| `usePredictions(poolId, [matchId], userId)` | palpite existente |
+| `useUpsertPrediction(poolId)` | criar/atualizar palpite |
+
+## Componentes Usados
+
+- `ScoreStepper` — `components/AppComponents/ScoreStepper`
+- [[Components/AppButton]]
 
 ## Regras de Negócio
 
 > [!warning]
-> - Palpite bloqueado após início da partida
+> - Palpite bloqueado após início da partida (via `isMatchLocked`, não `matchStatus`)
 > - `pointsEarned === null` não significa 0 — significa pendente
-> - Fase mata-mata: `knockoutMultiplier` aplicado
-> - Final: `finalMultiplier` aplicado
+> - `pool.scoringRules` deve estar disponível para exibir a tabela "Como pontua"
 
 ## Links Relacionados
 
 - [[API/Endpoints-Predictions]]
+- [[Utils/Domain-Entities]] → `isMatchLocked`
+- [[Hooks/useUpsertPrediction]]
 - [[Architecture/Fluxos-Principais]]

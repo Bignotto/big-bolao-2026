@@ -32,5 +32,8 @@ export interface Match {
 
 // Helper — true when the match has already kicked off (use to lock predictions)
 export function isMatchLocked(match: Pick<Match, 'matchDatetime'>): boolean {
-  return new Date(match.matchDatetime) <= new Date();
+  // matchDatetime is stored as Sao Paulo local time — compare as naive strings
+  const matchNaive = match.matchDatetime.replace(/Z$/, '').replace(/[+-]\d{2}:\d{2}$/, '').slice(0, 19);
+  const nowSP = new Date().toLocaleString('sv', { timeZone: 'America/Sao_Paulo' }).replace(' ', 'T');
+  return matchNaive <= nowSP;
 }

@@ -55,24 +55,18 @@ function stageEyebrow(m: MatchAny): string {
 }
 
 function formatDateLine(iso: string, stadium: string | null): string {
-  const date = new Date(iso);
-  const tz = 'America/Sao_Paulo';
-  const wday = new Intl.DateTimeFormat('pt-BR', { weekday: 'short', timeZone: tz })
-    .format(date).replace('.', '');
-  const day = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', timeZone: tz }).format(date);
-  const mon = new Intl.DateTimeFormat('pt-BR', { month: 'short', timeZone: tz })
-    .format(date).replace('.', '');
-  const time = new Intl.DateTimeFormat('pt-BR', {
-    hour: '2-digit', minute: '2-digit', hour12: false, timeZone: tz,
-  }).format(date);
+  const naive = iso.slice(0, 19);
+  const date = new Date(naive);
+  const wday = new Intl.DateTimeFormat('pt-BR', { weekday: 'short' }).format(date).replace('.', '');
+  const day = new Intl.DateTimeFormat('pt-BR', { day: '2-digit' }).format(date);
+  const mon = new Intl.DateTimeFormat('pt-BR', { month: 'short' }).format(date).replace('.', '');
+  const time = naive.slice(11, 16);
   const w = wday.charAt(0).toUpperCase() + wday.slice(1);
   return `${w}, ${day} ${mon} · ${time}${stadium ? ` · ${stadium}` : ''}`;
 }
 
 function formatKickoffTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString('pt-BR', {
-    hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'America/Sao_Paulo',
-  });
+  return iso.slice(11, 16);
 }
 
 type Rules = {

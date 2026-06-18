@@ -5,7 +5,9 @@ import { useRouter } from 'expo-router';
 import { useTheme } from 'styled-components/native';
 import { Ionicons } from '@expo/vector-icons';
 
+import Constants from 'expo-constants';
 import { TypographyFamilies } from '@/constants/tokens';
+import { OTA_LABEL } from '@/constants/tournament';
 
 // ─── Content ──────────────────────────────────────────────────────────────────
 
@@ -37,7 +39,7 @@ const STEPS = [
   },
 ];
 
-const APP_VERSION = '1.0.0';
+const APP_VERSION = Constants.expoConfig?.version ?? '—';
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
@@ -141,7 +143,7 @@ export default function HelpScreen() {
         {/* ── Footer ── */}
         <View style={s.gap32} />
         <Text style={[s.footer, { color: c.ink600 }]}>
-          BIG BOLÃO · V{APP_VERSION}{'   '}MUNDIAL 2026
+          BIG BOLÃO · V{APP_VERSION}{OTA_LABEL ? ` · ${OTA_LABEL}` : ''}{'   '}MUNDIAL 2026
         </Text>
         <View style={s.gap24} />
       </ScrollView>

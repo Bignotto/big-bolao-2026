@@ -38,24 +38,12 @@ function buildMetadataLine(match: Match): string {
 }
 
 function formatMatchDatetime(isoString: string): string {
-  const date = new Date(isoString);
-  const tz = 'America/Sao_Paulo';
+  const naive = isoString.slice(0, 19);
+  const date = new Date(naive);
   const locale = 'pt-BR';
-  const weekday = new Intl.DateTimeFormat(locale, {
-    weekday: 'short',
-    timeZone: tz,
-  }).format(date);
-  const dayMonth = new Intl.DateTimeFormat(locale, {
-    day: '2-digit',
-    month: '2-digit',
-    timeZone: tz,
-  }).format(date);
-  const time = new Intl.DateTimeFormat(locale, {
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: tz,
-    hour12: false,
-  }).format(date);
+  const weekday = new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(date);
+  const dayMonth = new Intl.DateTimeFormat(locale, { day: '2-digit', month: '2-digit' }).format(date);
+  const time = naive.slice(11, 16);
   return `${weekday}, ${dayMonth} · ${time}`;
 }
 
