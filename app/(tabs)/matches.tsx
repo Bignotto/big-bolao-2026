@@ -78,12 +78,12 @@ function computeGroupStandings(matches: Match[], group: string): TeamRow[] {
 function roundLabel(round: number, roundMatches: Match[]): string {
   const first = roundMatches[0];
   if (!first) return `RODADA ${round}`;
-  const date = new Date(first.matchDatetime);
-  const tz = 'America/Sao_Paulo';
-  const wday = new Intl.DateTimeFormat('pt-BR', { weekday: 'short', timeZone: tz })
+  const naive = first.matchDatetime.slice(0, 19);
+  const date = new Date(naive);
+  const wday = new Intl.DateTimeFormat('pt-BR', { weekday: 'short' })
     .format(date).replace('.', '').toUpperCase();
-  const day = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', timeZone: tz }).format(date);
-  const mon = new Intl.DateTimeFormat('pt-BR', { month: 'short', timeZone: tz })
+  const day = new Intl.DateTimeFormat('pt-BR', { day: '2-digit' }).format(date);
+  const mon = new Intl.DateTimeFormat('pt-BR', { month: 'short' })
     .format(date).replace('.', '').toUpperCase();
   return `RODADA ${round} · ${wday} ${day} ${mon}`;
 }
