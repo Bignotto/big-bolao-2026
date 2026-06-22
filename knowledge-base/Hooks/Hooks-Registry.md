@@ -1,7 +1,7 @@
 ---
 title: Registry de Hooks
 tags: [hooks, react-query, data-fetching]
-updated: 2026-06-09
+updated: 2026-06-22
 ---
 
 # Registry de Hooks
@@ -208,6 +208,27 @@ Ver: [[Hooks/useMyMatchPredictions]]
 - Retorna `PoolPredictionItem[]` enriquecido com `scoringRules` e `participantsCount`
 
 Ver: [[Hooks/useMatchPoolPredictions]]
+
+---
+
+## useMatchPredictionBreakdown
+
+**Arquivo:** `hooks/useMatchPredictionBreakdown.ts`
+**Tipo:** Query
+**Endpoint:** `GET /pools/:poolId/matches/:matchId/odds`
+**Uso:** Distribuição de palpites (casa / empate / fora) para uma partida, nos escopos bolão e global
+
+```ts
+const { data, isLoading } = useMatchPredictionBreakdown(poolId, matchId);
+// data: { pool: MatchPredictionBreakdown, global: MatchPredictionBreakdown }
+```
+
+- `staleTime: 30_000`
+- Query key: `poolKeys.oddsBreakdown(poolId, matchId)`
+- A API retorna percentuais; o hook converte para contagens absolutas via `scopeToBreakdown`
+- Aceita resposta com ou sem envelope `{ odds: ... }` (normalização interna)
+
+Ver: [[Components/MatchOddsBar]], [[API/Endpoints-Pools]], [[Utils/Domain-Entities]]
 
 ---
 

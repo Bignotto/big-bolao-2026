@@ -1,7 +1,7 @@
 ---
 title: Big Bolão 2026 — Map of Content
 tags: [index, MOC]
-updated: 2026-05-20
+updated: 2026-06-22
 ---
 
 # Big Bolão 2026 — Base de Conhecimento
@@ -71,6 +71,7 @@ updated: 2026-05-20
 - [[Components/MatchPredictionStatusCard]] — Status do palpite na partida
 - [[Components/PoolPredictionMatchCard]] — Card de palpite no bolão
 - [[Components/SegmentedControl]] — Controle segmentado (filtros)
+- [[Components/MatchOddsBar]] — Barra de distribuição de palpites (casa/empate/fora) com toggle pool/global
 
 ---
 
@@ -82,6 +83,7 @@ updated: 2026-05-20
 - [[Hooks/usePoolStandings]] — Ranking do bolão
 - [[Hooks/usePoolMembers]] — Participantes do bolão
 - [[Hooks/useSearchPools]] — Busca de bolões públicos
+- [[Hooks/useMatchPredictionBreakdown]] — Distribuição de palpites por desfecho (odds)
 
 ---
 

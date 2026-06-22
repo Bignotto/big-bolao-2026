@@ -1,7 +1,7 @@
 ---
 title: Endpoints — Pools
 tags: [api, pools, endpoints]
-updated: 2026-04-17
+updated: 2026-06-22
 ---
 
 # API — Pools & Pool Invites
@@ -22,6 +22,8 @@ updated: 2026-04-17
 | `GET` | `/pools/:poolId/predictions` | Sim | Todos os palpites do bolão (todas as partidas) |
 | `GET` | `/pools/:poolId/standings` | Sim | Ranking do bolão |
 | `PUT` | `/pools/:poolId/scoring-rules` | Sim | Atualizar regras de pontuação (apenas dono) |
+| `GET` | `/pools/:poolId/odds` | Sim | Distribuição de palpites para todas as partidas (pool + global) |
+| `GET` | `/pools/:poolId/matches/:matchId/odds` | Sim | Distribuição de palpites para uma partida (pool + global) |
 
 ## Pool Invites
 
@@ -120,6 +122,36 @@ updated: 2026-04-17
 > [!note]
 > Retorna apenas palpites dos participantes **deste bolão** para a partida especificada. Requer que o usuário autenticado seja participante do bolão.
 
+## GET /pools/:poolId/matches/:matchId/odds — Distribuição de Palpites
+
+Requer que o usuário autenticado seja participante ou criador do bolão.
+
+```json
+// Response 200
+{
+  "matchId": 42,
+  "global": {
+    "total": 150,
+    "homeWinsPercentage": 45.33,
+    "drawPercentage": 22.0,
+    "awayWinsPercentage": 32.67
+  },
+  "pool": {
+    "total": 12,
+    "homeWinsPercentage": 50.0,
+    "drawPercentage": 16.67,
+    "awayWinsPercentage": 33.33
+  }
+}
+```
+
+> [!note]
+> `GET /pools/:poolId/odds` retorna a mesma estrutura para **todas** as partidas do torneio em um array.
+> Partidas sem palpites retornam `total: 0` e todos os percentuais `0`.
+
+- **Response 403** — Usuário não é participante do bolão
+- **Response 404** — Bolão ou partida não encontrada
+
 ## Hooks Relacionados
 
 - [[Hooks/useCreatePool]]
@@ -127,3 +159,4 @@ updated: 2026-04-17
 - [[Hooks/usePoolStandings]]
 - [[Hooks/usePoolMembers]]
 - [[Hooks/useUpdateScoringRules]]
+- [[Hooks/useMatchPredictionBreakdown]]

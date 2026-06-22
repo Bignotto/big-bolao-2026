@@ -18,6 +18,8 @@ import { useMatch } from '@/hooks/useMatch';
 import { usePool, type ScoringRule } from '@/hooks/usePool';
 import { usePoolMembers } from '@/hooks/usePoolMembers';
 import { usePoolMatchPredictions } from '@/hooks/usePoolMatchPredictions';
+import { useMatchPredictionBreakdown } from '@/hooks/useMatchPredictionBreakdown';
+import MatchOddsBar from '@/components/matches/MatchOddsBar';
 import type { Match } from '@/domain/entities/Match';
 import { MatchStage, STAGE_LABELS } from '@/domain/enums/MatchStage';
 import { MatchStatus } from '@/domain/enums/MatchStatus';
@@ -290,6 +292,9 @@ export default function PoolMatchPredictionsScreen() {
     refresh,
   } = usePoolMatchPredictions(poolId, matchId);
 
+  const { data: oddsBreakdown, isLoading: oddsLoading } =
+    useMatchPredictionBreakdown(poolId, matchId);
+
   const membersById = React.useMemo(() => {
     const map = new Map<string, (typeof members)[number]>();
     for (const m of members) map.set(m.id, m);
@@ -389,6 +394,16 @@ export default function PoolMatchPredictionsScreen() {
         ListHeaderComponent={
           <>
             <MatchHeader match={match} />
+
+            <View style={{ marginHorizontal: 16, marginBottom: 16 }}>
+              <MatchOddsBar
+                homeName={match.homeTeam.name}
+                awayName={match.awayTeam.name}
+                pool={oddsBreakdown?.pool}
+                global={oddsBreakdown?.global}
+                isLoading={oddsLoading}
+              />
+            </View>
 
             {predictionsError != null && (
               <Text style={[s.errorText, { color: theme.colors.signalLose }]}>
