@@ -25,7 +25,11 @@ import { MatchStatus } from '@/domain/enums/MatchStatus';
 import type { PredictionPayload } from '@/domain/entities/Prediction';
 
 import AppButton from '@/components/AppComponents/AppButton';
+import AppSpacer from '@/components/AppComponents/AppSpacer';
 import ScoreStepper from '@/components/AppComponents/ScoreStepper';
+import MatchOddsBar from '@/components/matches/MatchOddsBar';
+import { useMatchPredictionBreakdown } from '@/hooks/useMatchPredictionBreakdown';
+import { outcomeFromScores } from '@/domain/helpers/predictionOutcome';
 import { TypographyFamilies } from '@/constants/tokens';
 
 // ─── Labels ───────────────────────────────────────────────────────────────────
@@ -140,6 +144,7 @@ export default function PredictScreen() {
     matchId != null ? [matchId] : [],
     apiUser?.id,
   );
+  const { data: oddsBreakdown, isLoading: oddsLoading } = useMatchPredictionBreakdown(poolId, matchId);
 
   const existingPrediction = predictions?.[0] ?? null;
   const [homeScore, setHomeScore] = useState(0);
@@ -190,6 +195,13 @@ export default function PredictScreen() {
   const rules = pool.scoringRules;
   const matchAny = match as typeof match & { round?: number | null };
 
+  const myPick =
+    locked && existingPrediction
+      ? outcomeFromScores(
+          existingPrediction.predictedHomeScore,
+          existingPrediction.predictedAwayScore,
+        )
+      : outcomeFromScores(homeScore, awayScore);
   const interpretation = getInterpretation(
     homeScore,
     awayScore,
@@ -297,6 +309,19 @@ export default function PredictScreen() {
             <View style={{ height: 16 }} />
             <ScoreStepper value={awayScore} onChange={setAwayScore} accent disabled={locked} />
           </View>
+        </View>
+
+        {/* OddsBar — always rendered; isLoading / total drive internal state */}
+        <View style={s.section}>
+          <MatchOddsBar
+            homeName={match.homeTeam.name ?? match.homeTeam.countryCode ?? ''}
+            awayName={match.awayTeam.name ?? match.awayTeam.countryCode ?? ''}
+            pool={oddsBreakdown?.pool}
+            global={oddsBreakdown?.global}
+            myPick={myPick}
+            isLoading={oddsLoading}
+          />
+          <AppSpacer verticalSpace="md" />
         </View>
 
         {/* Interpretation card */}

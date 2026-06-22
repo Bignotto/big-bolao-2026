@@ -51,3 +51,14 @@ PoolStanding (GET /pools/:poolId/standings item)
 { ranking: number; fullName: string; profileImageUrl: string|null; userId: string; poolId: number;
   totalPredictions: number; totalPoints: number; exactScoreCount: number;
   pointsRatio: number; guessRatio: number; predictionsRatio: number; }
+
+MatchOddsScope (scope object inside odds response)
+{ total: number; homeWinsPercentage: number; drawPercentage: number; awayWinsPercentage: number; }
+
+MatchOdds (GET /pools/:poolId/matches/:matchId/odds — single match)
+{ matchId: number; pool: MatchOddsScope; global: MatchOddsScope; }
+// Note: response may be wrapped as { odds: MatchOdds } — client normalises both shapes
+
+MatchPredictionBreakdown (domain entity — domain/entities/MatchPredictionBreakdown.ts)
+{ homeCount: number; drawCount: number; awayCount: number; total: number; }
+// Derived from MatchOddsScope by converting percentages back to absolute counts

@@ -46,12 +46,20 @@ tokens.radius.card
 
 ## tournament.ts
 
-Dados estáticos do torneio Mundial 2026:
-- Lista de grupos (A–H)
-- Seleções participantes
-- Configuração de fases
+Dados estáticos do torneio Mundial 2026.
 
-Usado quando não é necessário buscar da API (ex: labels, filtros).
+```ts
+TOURNAMENT_ID              // número lido de EXPO_PUBLIC_TOURNAMENT_ID (default 1)
+OTA_LABEL                  // label da versão OTA atual (ex: 'OTA 2') — incrementar a cada eas update
+TOURNAMENT_START_DATE      // new Date('2026-06-11T21:00:00-04:00') — abertura (México vs Canadá)
+TOURNAMENT_OPENING_MATCHUP // 'México — Canadá'
+TOURNAMENT_OPENING_DATE_LABEL // '11 jun'
+```
+
+> [!tip] OTA_LABEL
+> Incrementar `OTA_LABEL` a cada `eas update --branch production` facilita identificar qual versão o usuário está rodando.
+
+Usado quando não é necessário buscar da API (ex: labels, filtros, UI de contagem regressiva).
 
 ## styled.d.ts
 

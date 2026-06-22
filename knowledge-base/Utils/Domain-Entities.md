@@ -1,7 +1,7 @@
 ---
 title: Domain Entities
 tags: [domain, entities, typescript]
-updated: 2026-06-14
+updated: 2026-06-22
 ---
 
 # Entidades de Domínio
@@ -62,10 +62,29 @@ Filtros aplicáveis na listagem de partidas (fase, status, grupo).
 
 Query keys tipadas para TanStack Query.
 
+## MatchPredictionBreakdown
+
+**Arquivo:** `domain/entities/MatchPredictionBreakdown.ts`
+
+Representa a distribuição de palpites de uma partida em contagens absolutas.
+
+```ts
+interface MatchPredictionBreakdown {
+  homeCount: number;
+  drawCount: number;
+  awayCount: number;
+  total: number; // homeCount + drawCount + awayCount
+}
+```
+
+Usado por [[Components/MatchOddsBar]] e [[Hooks/useMatchPredictionBreakdown]].
+
 ## Enums e Helpers
 
 - `domain/enums/` — `MatchStatus`, `UserRole`, etc.
-- `domain/helpers/` — funções puras como `isMatchEditable(match)`, `calculatePoints(...)`, etc.
+- `domain/helpers/predictionOutcome.ts` — funções puras:
+  - `outcomeFromScores(home, away): MatchOutcome` — retorna `'HOME' | 'DRAW' | 'AWAY'`
+  - `toPercentages(breakdown): { homePct, drawPct, awayPct }` — converte contagens em percentuais inteiros usando largest-remainder rounding (garante soma = 100)
 
 ## Links Relacionados
 
