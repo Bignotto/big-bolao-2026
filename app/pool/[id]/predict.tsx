@@ -28,7 +28,9 @@ import AppButton from '@/components/AppComponents/AppButton';
 import AppSpacer from '@/components/AppComponents/AppSpacer';
 import ScoreStepper from '@/components/AppComponents/ScoreStepper';
 import MatchOddsBar from '@/components/matches/MatchOddsBar';
+import TeamFormGuide from '@/components/matches/TeamFormGuide';
 import { useMatchPredictionBreakdown } from '@/hooks/useMatchPredictionBreakdown';
+import { useTeamRecentForm } from '@/hooks/useTeamRecentForm';
 import { outcomeFromScores } from '@/domain/helpers/predictionOutcome';
 import { TypographyFamilies } from '@/constants/tokens';
 
@@ -145,6 +147,9 @@ export default function PredictScreen() {
     apiUser?.id,
   );
   const { data: oddsBreakdown, isLoading: oddsLoading } = useMatchPredictionBreakdown(poolId, matchId);
+
+  const homeForm = useTeamRecentForm(match?.homeTeam?.id);
+  const awayForm = useTeamRecentForm(match?.awayTeam?.id);
 
   const existingPrediction = predictions?.[0] ?? null;
   const [homeScore, setHomeScore] = useState(0);
@@ -293,6 +298,8 @@ export default function PredictScreen() {
             <Text style={[s.teamName, { color: theme.colors.ink100 }]}>
               {match.homeTeam.name ?? match.homeTeam.countryCode}
             </Text>
+            <AppSpacer verticalSpace="xsm" />
+            <TeamFormGuide results={homeForm.data} teamName={match.homeTeam.name} isLoading={homeForm.isLoading} />
             <View style={{ height: 16 }} />
             <ScoreStepper value={homeScore} onChange={setHomeScore} accent disabled={locked} />
           </View>
@@ -306,6 +313,8 @@ export default function PredictScreen() {
             <Text style={[s.teamName, { color: theme.colors.ink100 }]}>
               {match.awayTeam.name ?? match.awayTeam.countryCode}
             </Text>
+            <AppSpacer verticalSpace="xsm" />
+            <TeamFormGuide results={awayForm.data} teamName={match.awayTeam.name} isLoading={awayForm.isLoading} />
             <View style={{ height: 16 }} />
             <ScoreStepper value={awayScore} onChange={setAwayScore} accent disabled={locked} />
           </View>

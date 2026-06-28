@@ -142,7 +142,11 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
   }, [session, loading, segments]);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      await supabase.auth.signOut({ scope: 'local' });
+    }
   };
 
   return (
