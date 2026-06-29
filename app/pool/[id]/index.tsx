@@ -884,6 +884,19 @@ export default function PoolDetailsScreen() {
               entry={item}
               rank={item.rank ?? (showMemberFallback ? null : index + 1)}
               isCurrentUser={item.userId === apiUser?.id}
+              onPress={() => {
+                router.push({
+                  pathname: '/pool/[id]/user-breakdown',
+                  params: {
+                    id,
+                    userId: item.userId,
+                    userName: item.user.name,
+                    totalPoints: String(item.totalPoints),
+                    exactScoresCount: String(item.exactScoresCount),
+                    exactScorePoints: String(pool?.scoringRules?.exactScorePoints ?? 0),
+                  },
+                });
+              }}
             />
           )}
         />

@@ -7,6 +7,7 @@ export default function PoolLayout() {
       <Stack.Screen name="predict" />
       <Stack.Screen name="match/[matchId]" />
       <Stack.Screen name="settings" />
+      <Stack.Screen name="user-breakdown" options={{ presentation: 'modal', headerShown: false }} />
     </Stack>
   );
 }
