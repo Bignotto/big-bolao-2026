@@ -8,5 +8,7 @@ export const poolKeys = {
   oddsBreakdown: (poolId: number, matchId: number) =>
     ['pools', poolId, 'matches', matchId, 'odds'] as const,
   standings: (id: number) => ['pools', id, 'standings'] as const,
+  userPredictions: (poolId: number, userId: string) =>
+    ['pools', poolId, 'users', userId, 'predictions'] as const,
   search: (q: string) => ['pools', 'search', q] as const,
 };

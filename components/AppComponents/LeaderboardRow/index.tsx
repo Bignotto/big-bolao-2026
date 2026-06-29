@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   Easing,
   FadeIn,
@@ -32,6 +32,7 @@ export interface LeaderboardRowProps {
   rank: number | null;
   rankDelta?: number | null;
   showBorder?: boolean;
+  onPress?: () => void;
 }
 
 
@@ -45,6 +46,7 @@ export default function LeaderboardRow({
   rank,
   rankDelta,
   showBorder = true,
+  onPress,
 }: LeaderboardRowProps) {
   const theme = useTheme();
 
@@ -58,6 +60,7 @@ export default function LeaderboardRow({
       : '';
 
   return (
+    <Pressable onPress={onPress} disabled={!onPress}>
     <Animated.View
       layout={ROW_LAYOUT}
       style={[
@@ -119,6 +122,7 @@ export default function LeaderboardRow({
         </Animated.Text>
       </View>
     </Animated.View>
+    </Pressable>
   );
 }
 
@@ -181,13 +185,13 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
   },
   pointsCol: {
-    width: 40,
+    width: 52,
     alignItems: 'flex-end',
   },
   points: {
     fontFamily: TypographyFamilies.display,
-    fontSize: 22,
-    letterSpacing: -0.44,
+    fontSize: 16,
+    letterSpacing: -0.32,
     includeFontPadding: false,
   },
   // Header
@@ -217,7 +221,7 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   headerPts: {
-    width: 40,
+    width: 52,
     textAlign: 'right',
   },
 });
